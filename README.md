@@ -4,7 +4,8 @@ This is a set of tools for (muon) track matching between WAGASCI/BabyMIND detect
 and NINJA detectors (scintillation tracker only?).
 
 ## External dependencies (same as WAGASCI+BabyMIND Geant4 simulation)
-## Below is a copy of README.md in the MC simulation software written by Giorgio Pintaudi.
+
+Below is a copy of README.md in the MC simulation software written by Giorgio Pintaudi.
 
 ### GEANT4
 
