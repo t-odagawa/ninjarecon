@@ -15,15 +15,28 @@ int main(int argc, char *argv[]) {
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Hit Converter Start==========";
 
   if (argc != 4) {
-    BOOST_LOG_TRIVIAL(error) << "Usage: "<< argv[0]
-			     << "<input wagasci file path> <input ninja file path> <output file path>";
+    BOOST_LOG_TRIVIAL(error) << "Usage : "<< argv[0]
+			     << " <input wagasci file path> <input ninja file path> <output file path>";
     std::exit(1);
   }
 
   try {
     B2Reader reader(argv[1]);
-    B2Writer writer("../test.root");
+    B2Writer writer(argv[3]);
     BOOST_LOG_TRIVIAL(info) << "-----Settings Summary-----";
+
+    while (reader.ReadNextSpill() > 0) {
+
+      auto &input_spill_summary = reader.GetSpillSummary();
+
+      auto &output_spill_summary = writer.GetSpillSummary();
+
+      input_spill_summary.CloneHits(output_spill_summary);
+      input_spill_summary.CloneBSD(output_spill_summary);
+
+      writer.Fill();
+      
+    }
   
   } catch (const std::runtime_error &error) {
     BOOST_LOG_TRIVIAL(fatal) << "Runtime error : " << error.what();
