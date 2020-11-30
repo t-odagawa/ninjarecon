@@ -80,7 +80,7 @@ This program is used for NINJA tracker raw data conversion to WAGASCI-BabyMIND g
 It converts NINJA tracker EASIROC raw data into WAGASCI-BabyMIND data format, B2HitSummary, and
 push back each hits into the file.
 
-# Note: This is only used in real data because simulated data is generated in B2 data format.
+#### Note: This is only used in real data because simulated data is generated in B2 data format.
 
 ### Track Match
 
