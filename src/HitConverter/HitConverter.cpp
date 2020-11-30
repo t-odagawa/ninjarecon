@@ -11,7 +11,7 @@
 #include "B2Writer.hh"
 #include "B2HitSummary.hh"
 
-int main(int argc, char **argv) {
+int main(int argc, char *argv[]) {
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Hit Converter Start==========";
 
   if (argc != 4) {
@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 
   try {
     B2Reader reader(argv[1]);
-    B2Writer writer(argv[2]);
+    B2Writer writer("../test.root");
     BOOST_LOG_TRIVIAL(info) << "-----Settings Summary-----";
   
   } catch (const std::runtime_error &error) {

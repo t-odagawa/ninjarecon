@@ -84,11 +84,11 @@ endif ()
 
 # boost program_options, system, filesystem and log are required
 set(Boost_USE_STATIC_LIBS OFF)
-find_package(Boost 1.53 COMPONENTS system filesystem program_options unit_test_framework log_setup log REQUIRED)
+find_package(Boost 1.73 COMPONENTS system filesystem program_options unit_test_framework log_setup log REQUIRED)
 if (Boost_FOUND)
     message(STATUS "Boost library -- found")
-    message(STATUS "Boost library include dir : ${Boost_INCLUDE_DIR}")
-    include_directories("${Boost_INCLUDE_DIR}")
+    message(STATUS "Boost library include dir : ${Boost_INCLUDE_DIRS}")
+    include_directories("${Boost_INCLUDE_DIRS}")
 endif()
 
 # B2MC library
