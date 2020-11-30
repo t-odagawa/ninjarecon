@@ -5,6 +5,8 @@
 #include <boost/log/trivial.hpp>
 
 // root includes
+#include <TString.h>
+#include <TFile.h>
 
 // B2 includes
 #include "B2Reader.hh"
@@ -22,6 +24,8 @@ int main(int argc, char *argv[]) {
 
   try {
     B2Reader reader(argv[1]);
+    TString ntfilename = argv[2];
+    TFile *ntfile = new TFile(ntfilename, "read");
     B2Writer writer(argv[3]);
     BOOST_LOG_TRIVIAL(info) << "-----Settings Summary-----";
 

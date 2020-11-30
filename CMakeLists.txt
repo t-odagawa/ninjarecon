@@ -173,5 +173,5 @@ set(NINJA_RECON_LIBRARIES ${ROOT_LIBRARIES} ${Boost_LIBRARIES} ${B2MC_LIBRARY} $
 ################ Sub Directories ################
 
 add_subdirectory(src/HitConverter)
-#add_subdirectory(src/TrackMatch)
+add_subdirectory(src/TrackMatch)
 #add_subdirectory(tools)
