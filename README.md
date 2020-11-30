@@ -67,18 +67,33 @@ To recompile the package on KEKCC, move to the `build` folder and type:
 ```shell script
 CC=$(command -v gcc) CXX=$(command -v g++) \
   BOOST_ROOT=<path/to/your/boost/installation> \
-  cmake3 -DCMAKE_INSTALL_PREFIX=<path/to/your/ninja/recon/installation> ..
+  cmake3 -DCMAKE_INSTALL_PREFIX=<path/to/your/ninja/recon/installation> \
+  -DB2MC_PATH=<path/to/your/wagasci/mc/installation> \
+  -EVENT_DISPLAY_PATH=<path/to/your/wagasci/event/display/installation> ..
 ```
 
 ## Usage
 
 ### Hit Converter
 
-Open a terminal and type:
+This program is used for NINJA tracker raw data conversion to WAGASCI-BabyMIND general data format.
+It converts NINJA tracker EASIROC raw data into WAGASCI-BabyMIND data format, B2HitSummary, and
+push back each hits into the file.
 
-```shell script
+# Note: This is only used in real data because simulated data is generated in B2 data format.
 
-```
+### Track Match
+
+This program is used for track matching between NINJA tracker and WAGASCI-BabyMIND detectors.
+The merged file created in Hit Converter processes are analyzed and B2TrackSummary with NINJA
+tracker hit is created for each spill.
+
+### Emulsion Wrapper
+
+This program is used for data wrapper to give the scintillator detector information to
+the emulsion detector analyzers.
+This converts B2TrackSummary, B2BeamSummary, and so on into one simple class and enables them
+to be analyzed by any other NINJA people.
 
 
 
