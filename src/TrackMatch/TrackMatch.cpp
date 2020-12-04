@@ -1,5 +1,6 @@
 // system includes
 #include <string>
+#include <vector>
 
 // booost includes
 #include <boost/log/core.hpp>
@@ -37,8 +38,23 @@ int main(int argc, char *argv[]) {
     while (reader.ReadNextSpill() > 0) {
       auto &input_spill_summary = reader.GetSpillSummary();
 
+      // Create NINJA tracker hit cluster
+      auto it_hit = input_spill_summary.BeginHit();
+      std::vector<const B2HitSummary* > ninja_hits;
+      while (const auto *ninja_hit = it_hit.Next()) {
+	if(ninja_hit->GetDetectorId() == B2Detector::kNinja)
+	  ninja_hits.push_back(ninja_hit);
+      }
+      // CreateNinjaCluster(ninja_hits);
 
+      // Extrapolate BabyMIND cluster to the NINJA position
+      // and get the best cluster to match each NINJA cluster
+      // auto it_cluster = input_spill_summary.BeginCluter();
       
+
+      // Create output file only includes NINJA related items
+      // writer.Fill();
+
     }
     
   } catch (const std::runtime_error &error) {
