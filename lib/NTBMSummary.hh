@@ -22,12 +22,41 @@ class NTBMSummary: public TObject {
 
 public :
 
+  NTBMSummary();
+
+  /**
+   * Set the all members to zero
+   * no memory is released.
+   * @param option same as TObject option
+   */
+  void Clear(Option_t *option) override;
+
+  /**
+   * Print all the NTBM members value to the output stream
+   * @param os output stream
+   * @param obj object
+   * @return output stream
+   */
+  friend std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj);
+
+  void SetSpillPot(double spill_pot);
+
+  int GetSpillPot() const;
+
+  void SetBunchPot(int bunch, double bunch_pot);
+
+  double GetBunchPot(int bunch) const;
+
+  void SetBsdSpillNumber(int bsd_spill_number);
+
+  int GetBsdSpillNumber() const;
+
 private :
   ///> Beam information extracted from B2BeamSummary
   ///> total POT of the spill
-  int spill_pot_;
+  double spill_pot_;
   ///> POT for each bunch
-  int bunch_pot_[8];
+  double bunch_pot_[8];
   ///> BSD spill number
   int bsd_spill_number_;
   ///> spill time stamp
@@ -72,7 +101,8 @@ private :
   std::vector<std::array<double,2>> ninja_position_;
   ///> Reconstructed tangent for track matching
   std::vector<std::array<double,2>> ninja_tangent_;
-  
+
+  //ClassDefOverride(NTBMSummary, 1) // NT BM Summary
 }
 
 #endif
