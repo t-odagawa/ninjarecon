@@ -44,9 +44,9 @@ private :
   ///> Baby MIND reconstructed momentum
   std::vector<double> momentum_;
   ///> Baby MIND reconstructed position
-  std::vector<array<double,2>> position_;
+  std::vector<std::array<double,2>> baby_mind_position_;
   ///> Baby MIND reconstructed tangent
-  std::vector<array<double,2>> tangent_;
+  std::vector<std::array<double,2>> baby_mind_tangent_;
   ///> Baby MIND reconstructed charge (assuming muon +/-)
   std::vector<int> charge_;
   ///> Baby MIND reconstructed track direction (+/-)
@@ -54,8 +54,25 @@ private :
   ///> Bunch number where the track detected
   std::vector<int> bunch_;
   ///> NINJA tracker information for muon track matching
+  ///> Number of NINJA tracker 3d clusters
+  int clusters_;
   ///> Corresponding Baby MIND track id
   std::vector<int> baby_mind_track_id_;
+  ///> Number of NINJA tracker hits
+  std::vector<std::array<int,2>> hits_;
+  ///> List of hit scintillator plane in NINJA tracker
+  std::vector<std::array<std::vector<int>,2>> plane_;
+  ///> List of hit scintillator slot in NINJA tracker
+  std::vector<std::array<std::vector<int>,2>> slot_;
+  ///> List of hit scintillator pe/tot in NINJA tracker
+  std::vector<std::array<std::vector<double>,2>> pe_;
+  ///> Difference from the first hit bunch in NINJA tracker
+  std::vector<int> bunch_difference_;
+  ///> Reconstructed position for track matching
+  std::vector<std::array<double,2>> ninja_position_;
+  ///> Reconstructed tangent for track matching
+  std::vector<std::array<double,2>> ninja_tangent_;
+  
 }
 
 #endif
