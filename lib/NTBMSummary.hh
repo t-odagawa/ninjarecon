@@ -51,6 +51,134 @@ public :
 
   int GetBsdSpillNumber() const;
 
+  void SetTimestamp(double timestamp);
+
+  double GetTimeStamp() const;
+
+  void SetBsdGoodSpillFlag(int bsd_good_spill_flag);
+
+  int GetBsdGoodSpillFlag() const;
+
+  void SetWagasciGoodSpillFlag(int wagasci_good_spill_flag);
+
+  int GetWagasciGoodSpillFlag() const;
+
+  void SetNumberOfTracks(int number_of_tracks);
+
+  int GetNumberOfTracks() const;
+
+  void SetTrackType(int track, int track_type);
+
+  int GetTrackType(int track) const;
+
+  void SetMomentumType(int track, int momentum_type);
+
+  int GetMomentumType(int track) const;
+
+  void SetMomentum(int track, double momentum);
+
+  double GetMomentum(int track) const;
+
+  void SetBabyMindPosition(int track, int view, double baby_mind_position);
+
+  void SetBabyMindPosition(int track, std::array<double,2> baby_mind_position);
+
+  double GetBabyMindPosition(int track, int view) const;
+
+  std::array<double,2> GetBabyMindPosition(int track) const;
+
+  void SetBabyMindTangent(int track, int view, double baby_mind_tangent);
+
+  void SetBabyMindPosition(int track, std::array<double,2> baby_mind_tangent);
+
+  double GetBabyMindTangent(int track, int view) const;
+
+  std::array<double,2> GetBabyMindTangent(int track) const;
+
+  void SetCharge(int track, int charge);
+
+  int GetCharge(int track) const;
+
+  void SetDirection(int track, int direction);
+
+  int GetDirection(int track) const;
+
+  void SetBunch(int track, int bunch);
+
+  int GetBunch(int track) const;
+
+  void SetNumberOfClusters(int number_of_clusters);
+
+  int GetNumberOfClusters() const;
+
+  void SetBabyMindTrackId(int cluster, int baby_mind_track_id);
+
+  int GetBabyMindTrackId(int cluster) const;
+
+  void SetNumberOfHits(int cluster, int view, int number_of_hits);
+
+  void SetNumberOfHits(int cluster, std::array<int,2> number_of_hits);
+
+  int GetNumberOfHits(int cluster, int view) const;
+
+  std::array<int,2> GetNumberOfHits(int cluster) const;
+
+  void SetPlane(int cluster, int view, int hit, int plane);
+
+  void SetPlane(int cluster, int view, std::vector<int> plane);
+
+  void SetPlane(int cluster, std::array<std::vector<int>,2> plane);
+
+  int GetPlane(int cluster, int view, int hit) const;
+
+  std::vector<int> GetPlane(int cluster, int view) const;
+
+  std::array<std::vector<int>,2> GetPlane(int cluster) const;
+
+  void SetSlot(int cluster, int view, int hit, int slot);
+
+  void SetSlot(int cluster, int view, std::vector<int> slot);
+
+  void SetSlot(int cluster, std::array<std::vector<int>,2> slot);
+
+  int GetSlot(int cluster, int view, int hit) const;
+
+  std::vector<int> GetSlot(int cluster, int view) const;
+
+  std::array<std::vector<int>,2> GetSlot(int cluster) const;
+
+  void SetPe(int cluster, int view, int hit, int pe);
+
+  void SetPe(int cluster, int view, std::vector<int> pe);
+
+  void SetPe(int cluster, std::array<std::vector<int>,2> pe);
+
+  double GetPe(int cluster, int view, int hit) const;
+
+  std::vector<double> GetPe(int cluster, int view) const;
+
+  std::array<std::vector<double>,2> GetPe(int cluster) const;
+
+  void SetBunchDifference(int cluster, int bunch_difference);
+
+  int GetBunchDifference(int cluster) const;
+
+  void SetNinjaPosition(int cluster, int view, double ninja_position);
+
+  void SetNinjaPosition(int cluster, std::array<double,2> ninja_position);
+
+  double GetNinjaPosition(int cluster, int view) const;
+
+  std::array<double,2> GetNinjaPosition(int cluster) const;
+
+  void SetNinjaTangent(int cluster, int view, double ninja_tangent);
+
+  void SetNinjaTangent(int cluster, std::array<double,2> ninja_tangent);
+
+  double GetNinjaTangent(int cluster, int view) const;
+
+  std::array<double,2> GetNinjaTangent(int cluster) const;
+
 private :
   ///> Beam information extracted from B2BeamSummary
   ///> total POT of the spill
@@ -64,8 +192,10 @@ private :
   ///> BSD spill flag
   int bsd_good_spill_flag_;
   ///> WAGASCI spill flag
-  int wagasc_good_spill_flag_;
+  int wagasci_good_spill_flag_;
   ///> Baby MIND information extracted from B2TrackSummary and B2ClusterSummary
+  ///> number of tracks;
+  int number_of_tracks_;
   ///> track type (0:ECC interaction cand, 1:sand muon, -1:other)
   std::vector<int> track_type_;
   ///> momentum measurement type (0:range, 1:curvature)
@@ -84,11 +214,11 @@ private :
   std::vector<int> bunch_;
   ///> NINJA tracker information for muon track matching
   ///> Number of NINJA tracker 3d clusters
-  int clusters_;
+  int number_of_ninja_clusters_;
   ///> Corresponding Baby MIND track id
   std::vector<int> baby_mind_track_id_;
   ///> Number of NINJA tracker hits
-  std::vector<std::array<int,2>> hits_;
+  std::vector<std::array<int,2>> number_of_hits_;
   ///> List of hit scintillator plane in NINJA tracker
   std::vector<std::array<std::vector<int>,2>> plane_;
   ///> List of hit scintillator slot in NINJA tracker
