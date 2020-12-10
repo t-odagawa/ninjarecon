@@ -114,7 +114,31 @@ int main(int argc, char *argv[]) {
       auto &output_hit_summary = output_spill_summary.AddHit();
 
       for(int slot = 0; slot < NUM_SLOTS; slot++) {
+	if(pe[slot] < 2.5) continue;
+	
 	output_hit_summary.SetDetector(B2Detector::kNinja);
+	//output_hit_summary.SetRelativePosition();
+	//output_hit_summary.SetAbsolutePosition();
+	//output_hit_summary.SetScintillatorPosition();
+	output_hit_summary.SetPlane(pln[slot]);
+	//output_hit_summary.SetSlot();
+	output_hit_summary.SetTrueTimeNs(lt[slot]-tt[slot]); // Time over Threshold stored
+	switch (view[slot]) {
+	case B2View::kTopView :
+	  output_hit_summary.SetView(B2View::kTopView);
+	  output_hit_summary.SetScintillatorType(B2ScintillatorType::kVertical);
+	  output_hit_summary.SetHighGainPeu(B2Readout::kTopReadout, pe[slot]);
+	  break;
+	case B2View::kSideView :
+	  output_hit_summary.SetView(B2View::kSideView);
+	  output_hit_summary.SetScintillatorType(B2ScintillatorType::kHorizontal);
+	  output_hit_summary.SetHighGainPeu(B2Readout::kSideReadout, pe[slot]);
+	  break;
+	case B2View::kUnknownView :
+	  BOOST_LOG_TRIVIAL(error) << "Unknown view";
+	  break;
+	}
+	
       }
       
       writer.Fill();

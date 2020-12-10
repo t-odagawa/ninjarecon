@@ -55,6 +55,9 @@ bool CompareNinjaHits(const B2HitSummary* lhs, const B2HitSummary* rhs) {
  */
 void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits) {
   std::sort(ninja_hits.begin(), ninja_hits.end(), CompareNinjaHits);
+
+  auto it_ninja_hit = ninja_hits.begin();
+
 }
 
 int main(int argc, char *argv[]) {
@@ -86,7 +89,9 @@ int main(int argc, char *argv[]) {
 	if(ninja_hit->GetDetectorId() == B2Detector::kNinja)
 	  ninja_hits.push_back(ninja_hit);
       }
-      // CreateNinjaCluster(ninja_hits);
+
+      if (ninja_hits.size() > 0) 
+	CreateNinjaCluster(ninja_hits);
 
       // Extrapolate BabyMIND cluster to the NINJA position
       // and get the best cluster to match each NINJA cluster
