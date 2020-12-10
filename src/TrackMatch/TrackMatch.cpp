@@ -12,9 +12,50 @@
 // B2 includes
 #include "B2Reader.hh"
 #include "B2Writer.hh"
+#include "B2Enum.hh"
+#include "B2Dimension.hh"
 #include "B2HitSummary.hh"
 
 namespace logging = boost::log;
+
+/**
+ * Get scintillator center position of B2HitSummary in NINJA tracker coordinate
+ * @param ninja_hit B2HitSummary object
+ * @return scintillator position in NINJA tracker coordinate
+ */
+double GetScintillatorPosition(const B2HitSummary* ninja_hit) {
+  TVector3 position;
+  B2Dimension::GetPosNinjaTracker(ninja_hit->GetView(), ninja_hit->GetPlane(),
+				  ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()),
+				  position);
+  switch (ninja_hit->GetView()) {
+  case B2View::kTopView :
+    return position.X();
+  case B2View::kSideView :
+    return position.Y();
+  case B2View::kUnknownView :
+    BOOST_LOG_TRIVIAL(error) << "Unknown view";
+    return B2_NON_INITIALIZED_VALUE;
+  }
+}
+
+/**
+ * Comparator for B2HitSummary vector sort
+ * @param lhs left hand side object
+ * @param rhs right hand side object
+ * @return true if the objects should be swapped
+ */
+bool CompareNinjaHits(const B2HitSummary* lhs, const B2HitSummary* rhs) {
+  if (lhs->GetView()!=rhs->GetView()) return lhs->GetView() < rhs->GetView();
+  return GetScintillatorPosition(lhs) < GetScintillatorPosition(rhs);
+}
+
+/**
+ * Create NINJA tracker cluster
+ */
+void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits) {
+  std::sort(ninja_hits.begin(), ninja_hits.end(), CompareNinjaHits);
+}
 
 int main(int argc, char *argv[]) {
 
@@ -25,7 +66,7 @@ int main(int argc, char *argv[]) {
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Track Matching Start==========";
 
-  if (argc != 2) {
+  if (argc != 3) {
     BOOST_LOG_TRIVIAL(error) << "Usage : " << argv[0]
 			     << " <input B2 file path> <output B2 file path>";
     std::exit(1);
