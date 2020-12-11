@@ -1,5 +1,7 @@
 #include "NTBMSummary.hh"
 
+#include <ostream>
+
 NTBMSummary::NTBMSummary() {
   NTBMSummary::Clear("C");
 }
