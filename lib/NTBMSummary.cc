@@ -1,7 +1,5 @@
 #include "NTBMSummary.hh"
 
-#include <boost/log/trivial.hpp>
-
 NTBMSummary::NTBMSummary() {
   NTBMSummary::Clear("C");
 }
