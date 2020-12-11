@@ -37,11 +37,13 @@ public :
    * @param obj object
    * @return output stream
    */
-  //friend std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj);
-  /*
+  friend std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj);
+
+  // Setter/Getter
+  
   void SetSpillPot(double spill_pot);
 
-  int GetSpillPot() const;
+  double GetSpillPot() const;
 
   void SetBunchPot(int bunch, double bunch_pot);
 
@@ -53,7 +55,7 @@ public :
 
   void SetTimestamp(double timestamp);
 
-  double GetTimeStamp() const;
+  double GetTimestamp() const;
 
   void SetBsdGoodSpillFlag(int bsd_good_spill_flag);
 
@@ -83,17 +85,17 @@ public :
 
   void SetBabyMindPosition(int track, std::array<double,2> baby_mind_position);
 
-  double GetBabyMindPosition(int track, int view) const;
-
   std::array<double,2> GetBabyMindPosition(int track) const;
+
+  double GetBabyMindPosition(int track, int view) const;
 
   void SetBabyMindTangent(int track, int view, double baby_mind_tangent);
 
   void SetBabyMindTangent(int track, std::array<double,2> baby_mind_tangent);
 
-  double GetBabyMindTangent(int track, int view) const;
-
   std::array<double,2> GetBabyMindTangent(int track) const;
+
+  double GetBabyMindTangent(int track, int view) const;
 
   void SetCharge(int track, int charge);
 
@@ -119,9 +121,9 @@ public :
 
   void SetNumberOfHits(int cluster, std::array<int,2> number_of_hits);
 
-  int GetNumberOfHits(int cluster, int view) const;
-
   std::array<int,2> GetNumberOfHits(int cluster) const;
+
+  int GetNumberOfHits(int cluster, int view) const;
 
   void SetPlane(int cluster, int view, int hit, int plane);
 
@@ -129,11 +131,11 @@ public :
 
   void SetPlane(int cluster, std::array<std::vector<int>,2> plane);
 
-  int GetPlane(int cluster, int view, int hit) const;
+  std::array<std::vector<int>,2> GetPlane(int cluster) const;
 
   std::vector<int> GetPlane(int cluster, int view) const;
 
-  std::array<std::vector<int>,2> GetPlane(int cluster) const;
+  int GetPlane(int cluster, int view, int hit) const;
 
   void SetSlot(int cluster, int view, int hit, int slot);
 
@@ -141,23 +143,23 @@ public :
 
   void SetSlot(int cluster, std::array<std::vector<int>,2> slot);
 
-  int GetSlot(int cluster, int view, int hit) const;
+  std::array<std::vector<int>,2> GetSlot(int cluster) const;
 
   std::vector<int> GetSlot(int cluster, int view) const;
 
-  std::array<std::vector<int>,2> GetSlot(int cluster) const;
+  int GetSlot(int cluster, int view, int hit) const;
 
-  void SetPe(int cluster, int view, int hit, int pe);
+  void SetPe(int cluster, int view, int hit, double pe);
 
-  void SetPe(int cluster, int view, std::vector<int> pe);
+  void SetPe(int cluster, int view, std::vector<double> pe);
 
-  void SetPe(int cluster, std::array<std::vector<int>,2> pe);
+  void SetPe(int cluster, std::array<std::vector<double>,2> pe);
 
-  double GetPe(int cluster, int view, int hit) const;
+  std::array<std::vector<double>,2> GetPe(int cluster) const;
 
   std::vector<double> GetPe(int cluster, int view) const;
 
-  std::array<std::vector<double>,2> GetPe(int cluster) const;
+  double GetPe(int cluster, int view, int hit) const;
 
   void SetBunchDifference(int cluster, int bunch_difference);
 
@@ -167,18 +169,18 @@ public :
 
   void SetNinjaPosition(int cluster, std::array<double,2> ninja_position);
 
-  double GetNinjaPosition(int cluster, int view) const;
-
   std::array<double,2> GetNinjaPosition(int cluster) const;
+
+  double GetNinjaPosition(int cluster, int view) const;
 
   void SetNinjaTangent(int cluster, int view, double ninja_tangent);
 
   void SetNinjaTangent(int cluster, std::array<double,2> ninja_tangent);
 
+  std::array<double,2> GetNinjaTangent(int cluster) const;
+
   double GetNinjaTangent(int cluster, int view) const;
 
-  std::array<double,2> GetNinjaTangent(int cluster) const;
-*/
 private :
   ///> Beam information extracted from B2BeamSummary
   ///> total POT of the spill
@@ -232,7 +234,7 @@ private :
   ///> Reconstructed tangent for track matching
   std::vector<std::array<double,2>> ninja_tangent_;
 
-  ClassDefOverride(NTBMSummary, 1) // NT BM Summary
+  ClassDefOverride(NTBMSummary, 3) // NT BM Summary
 };
 
 #endif
