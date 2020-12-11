@@ -37,8 +37,8 @@ public :
    * @param obj object
    * @return output stream
    */
-  friend std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj);
-
+  //friend std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj);
+  /*
   void SetSpillPot(double spill_pot);
 
   int GetSpillPot() const;
@@ -89,7 +89,7 @@ public :
 
   void SetBabyMindTangent(int track, int view, double baby_mind_tangent);
 
-  void SetBabyMindPosition(int track, std::array<double,2> baby_mind_tangent);
+  void SetBabyMindTangent(int track, std::array<double,2> baby_mind_tangent);
 
   double GetBabyMindTangent(int track, int view) const;
 
@@ -178,7 +178,7 @@ public :
   double GetNinjaTangent(int cluster, int view) const;
 
   std::array<double,2> GetNinjaTangent(int cluster) const;
-
+*/
 private :
   ///> Beam information extracted from B2BeamSummary
   ///> total POT of the spill
@@ -232,7 +232,7 @@ private :
   ///> Reconstructed tangent for track matching
   std::vector<std::array<double,2>> ninja_tangent_;
 
-  //ClassDefOverride(NTBMSummary, 1) // NT BM Summary
-}
+  ClassDefOverride(NTBMSummary, 1) // NT BM Summary
+};
 
 #endif

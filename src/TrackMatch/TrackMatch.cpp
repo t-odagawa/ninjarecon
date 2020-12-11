@@ -51,12 +51,15 @@ bool CompareNinjaHits(const B2HitSummary* lhs, const B2HitSummary* rhs) {
 }
 
 /**
- * Create NINJA tracker cluster
+ * Create NINJA tracker clusters
  */
 void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits) {
   std::sort(ninja_hits.begin(), ninja_hits.end(), CompareNinjaHits);
 
-  auto it_ninja_hit = ninja_hits.begin();
+  for(auto itr = ninja_hits.begin(); itr != ninja_hits.end(); ++itr) {
+
+  }
+
 
 }
 
@@ -97,8 +100,9 @@ int main(int argc, char *argv[]) {
       // and get the best cluster to match each NINJA cluster
       // auto it_cluster = input_spill_summary.BeginCluter();
       
-
-      // Create output file only includes NINJA related items
+      // Update NINJA hit summary information?
+      
+      // Create output file
       // writer.Fill();
 
     }
