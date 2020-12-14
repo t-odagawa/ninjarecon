@@ -81,6 +81,10 @@ public :
 
   double GetMomentum(int track) const;
 
+  void SetMomentumError(int track, double momentum_error);
+
+  double GetMomentumError(int track) const;
+
   void SetBabyMindPosition(int track, int view, double baby_mind_position);
 
   void SetBabyMindPosition(int track, std::array<double,2> baby_mind_position);
@@ -89,6 +93,14 @@ public :
 
   double GetBabyMindPosition(int track, int view) const;
 
+  void SetBabyMindPositionError(int track, int view, double baby_mind_position_error);
+
+  void SetBabyMindPositionError(int track, std::array<double,2> baby_mind_position_error);
+
+  std::array<double,2> GetBabyMindPositionError(int track) const;
+
+  double GetBabyMindPositionError(int track, int view) const;
+  
   void SetBabyMindTangent(int track, int view, double baby_mind_tangent);
 
   void SetBabyMindTangent(int track, std::array<double,2> baby_mind_tangent);
@@ -96,6 +108,14 @@ public :
   std::array<double,2> GetBabyMindTangent(int track) const;
 
   double GetBabyMindTangent(int track, int view) const;
+
+  void SetBabyMindTangentError(int track, int view, double baby_mind_tangent_error);
+
+  void SetBabyMindTangentError(int track, std::array<double,2> baby_mind_tangent_error);
+
+  std::array<double,2> GetBabyMindTangentError(int track) const;
+
+  double GetBabyMindTangentError(int track, int view) const;
 
   void SetCharge(int track, int charge);
 
@@ -173,6 +193,14 @@ public :
 
   double GetNinjaPosition(int cluster, int view) const;
 
+  void SetNinjaPositionError(int cluster, int view, double ninja_position_error);
+
+  void SetNinjaPositionError(int cluster, std::array<double,2> ninja_position_error);
+
+  std::array<double,2> GetNinjaPositionError(int cluster) const;
+
+  double GetNinjaPositionError(int cluster, int view) const;
+
   void SetNinjaTangent(int cluster, int view, double ninja_tangent);
 
   void SetNinjaTangent(int cluster, std::array<double,2> ninja_tangent);
@@ -180,6 +208,14 @@ public :
   std::array<double,2> GetNinjaTangent(int cluster) const;
 
   double GetNinjaTangent(int cluster, int view) const;
+
+  void SetNinjaTangentError(int cluster, int view, double ninja_tangent_error);
+
+  void SetNinjaTangentError(int cluster, std::array<double,2> ninja_tangent_error);
+
+  std::array<double,2> GetNinjaTangentError(int cluster) const;
+
+  double GetNinjaTangentError(int cluster, int view) const;
 
 private :
   ///> Beam information extracted from B2BeamSummary
@@ -204,10 +240,16 @@ private :
   std::vector<int> momentum_type_;
   ///> Baby MIND reconstructed momentum
   std::vector<double> momentum_;
+  ///> Baby MIND reconstructed momentum error
+  std::vector<double> momentum_error_;
   ///> Baby MIND reconstructed position
   std::vector<std::array<double,2>> baby_mind_position_;
+  ///> Baby MIND reconstructed position error
+  std::vector<std::array<double,2>> baby_mind_position_error_;
   ///> Baby MIND reconstructed tangent
   std::vector<std::array<double,2>> baby_mind_tangent_;
+  ///> Baby MIND reconstructed tangent error
+  std::vector<std::array<double,2>> baby_mind_tangent_error_;
   ///> Baby MIND reconstructed charge (assuming muon +/-)
   std::vector<int> charge_;
   ///> Baby MIND reconstructed track direction (+/-)
@@ -231,8 +273,12 @@ private :
   std::vector<int> bunch_difference_;
   ///> Reconstructed position for track matching
   std::vector<std::array<double,2>> ninja_position_;
+  ///> Reconstructed position error for track matching
+  std::vector<std::array<double,2>> ninja_position_error_;
   ///> Reconstructed tangent for track matching
   std::vector<std::array<double,2>> ninja_tangent_;
+  ///> Reconstructed tangent error for track matching
+  std::vector<std::array<double,2>> ninja_tangent_error_;
 
   ClassDefOverride(NTBMSummary, 3) // NT BM Summary
 };
