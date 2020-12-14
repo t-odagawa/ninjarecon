@@ -2,14 +2,15 @@
 #define NTBMSUMMARY_HH
 
 #include <TObject.h>
+#include <TVector2.h>
 
 #include <vector>
-#include <array>
 
 #ifdef __ROOTCLING__
 #pragma link off globals;
 #pragma link off classes;
 #pragma link off functions;
+#pragma link C++ nestedclasses;
 #pragma link C++ class NTBMSummary+;
 #endif
 
@@ -87,33 +88,33 @@ public :
 
   void SetBabyMindPosition(int track, int view, double baby_mind_position);
 
-  void SetBabyMindPosition(int track, std::array<double,2> baby_mind_position);
+  void SetBabyMindPosition(int track, std::vector<double> baby_mind_position);
 
-  std::array<double,2> GetBabyMindPosition(int track) const;
+  std::vector<double> GetBabyMindPosition(int track) const;
 
   double GetBabyMindPosition(int track, int view) const;
 
   void SetBabyMindPositionError(int track, int view, double baby_mind_position_error);
 
-  void SetBabyMindPositionError(int track, std::array<double,2> baby_mind_position_error);
+  void SetBabyMindPositionError(int track, std::vector<double> baby_mind_position_error);
 
-  std::array<double,2> GetBabyMindPositionError(int track) const;
+  std::vector<double> GetBabyMindPositionError(int track) const;
 
   double GetBabyMindPositionError(int track, int view) const;
   
   void SetBabyMindTangent(int track, int view, double baby_mind_tangent);
 
-  void SetBabyMindTangent(int track, std::array<double,2> baby_mind_tangent);
+  void SetBabyMindTangent(int track, std::vector<double> baby_mind_tangent);
 
-  std::array<double,2> GetBabyMindTangent(int track) const;
+  std::vector<double> GetBabyMindTangent(int track) const;
 
   double GetBabyMindTangent(int track, int view) const;
 
   void SetBabyMindTangentError(int track, int view, double baby_mind_tangent_error);
 
-  void SetBabyMindTangentError(int track, std::array<double,2> baby_mind_tangent_error);
+  void SetBabyMindTangentError(int track, std::vector<double> baby_mind_tangent_error);
 
-  std::array<double,2> GetBabyMindTangentError(int track) const;
+  std::vector<double> GetBabyMindTangentError(int track) const;
 
   double GetBabyMindTangentError(int track, int view) const;
 
@@ -139,9 +140,9 @@ public :
 
   void SetNumberOfHits(int cluster, int view, int number_of_hits);
 
-  void SetNumberOfHits(int cluster, std::array<int,2> number_of_hits);
+  void SetNumberOfHits(int cluster, std::vector<int> number_of_hits);
 
-  std::array<int,2> GetNumberOfHits(int cluster) const;
+  std::vector<int> GetNumberOfHits(int cluster) const;
 
   int GetNumberOfHits(int cluster, int view) const;
 
@@ -149,9 +150,9 @@ public :
 
   void SetPlane(int cluster, int view, std::vector<int> plane);
 
-  void SetPlane(int cluster, std::array<std::vector<int>,2> plane);
+  void SetPlane(int cluster, std::vector<std::vector<int>> plane);
 
-  std::array<std::vector<int>,2> GetPlane(int cluster) const;
+  std::vector<std::vector<int>> GetPlane(int cluster) const;
 
   std::vector<int> GetPlane(int cluster, int view) const;
 
@@ -161,9 +162,9 @@ public :
 
   void SetSlot(int cluster, int view, std::vector<int> slot);
 
-  void SetSlot(int cluster, std::array<std::vector<int>,2> slot);
+  void SetSlot(int cluster, std::vector<std::vector<int>> slot);
 
-  std::array<std::vector<int>,2> GetSlot(int cluster) const;
+  std::vector<std::vector<int>> GetSlot(int cluster) const;
 
   std::vector<int> GetSlot(int cluster, int view) const;
 
@@ -173,9 +174,9 @@ public :
 
   void SetPe(int cluster, int view, std::vector<double> pe);
 
-  void SetPe(int cluster, std::array<std::vector<double>,2> pe);
+  void SetPe(int cluster, std::vector<std::vector<double>> pe);
 
-  std::array<std::vector<double>,2> GetPe(int cluster) const;
+  std::vector<std::vector<double>> GetPe(int cluster) const;
 
   std::vector<double> GetPe(int cluster, int view) const;
 
@@ -187,37 +188,38 @@ public :
 
   void SetNinjaPosition(int cluster, int view, double ninja_position);
 
-  void SetNinjaPosition(int cluster, std::array<double,2> ninja_position);
+  void SetNinjaPosition(int cluster, std::vector<double> ninja_position);
 
-  std::array<double,2> GetNinjaPosition(int cluster) const;
+  std::vector<double> GetNinjaPosition(int cluster) const;
 
   double GetNinjaPosition(int cluster, int view) const;
 
   void SetNinjaPositionError(int cluster, int view, double ninja_position_error);
 
-  void SetNinjaPositionError(int cluster, std::array<double,2> ninja_position_error);
+  void SetNinjaPositionError(int cluster, std::vector<double> ninja_position_error);
 
-  std::array<double,2> GetNinjaPositionError(int cluster) const;
+  std::vector<double> GetNinjaPositionError(int cluster) const;
 
   double GetNinjaPositionError(int cluster, int view) const;
 
   void SetNinjaTangent(int cluster, int view, double ninja_tangent);
 
-  void SetNinjaTangent(int cluster, std::array<double,2> ninja_tangent);
+  void SetNinjaTangent(int cluster, std::vector<double> ninja_tangent);
 
-  std::array<double,2> GetNinjaTangent(int cluster) const;
+  std::vector<double> GetNinjaTangent(int cluster) const;
 
   double GetNinjaTangent(int cluster, int view) const;
 
   void SetNinjaTangentError(int cluster, int view, double ninja_tangent_error);
 
-  void SetNinjaTangentError(int cluster, std::array<double,2> ninja_tangent_error);
+  void SetNinjaTangentError(int cluster, std::vector<double> ninja_tangent_error);
 
-  std::array<double,2> GetNinjaTangentError(int cluster) const;
+  std::vector<double> GetNinjaTangentError(int cluster) const;
 
   double GetNinjaTangentError(int cluster, int view) const;
 
 private :
+
   ///> Beam information extracted from B2BeamSummary
   ///> total POT of the spill
   double spill_pot_;
@@ -243,13 +245,14 @@ private :
   ///> Baby MIND reconstructed momentum error
   std::vector<double> momentum_error_;
   ///> Baby MIND reconstructed position
-  std::vector<std::array<double,2>> baby_mind_position_;
+  //std::vector<std::array<double,2>> baby_mind_position_;
+  std::vector<std::vector<double>> baby_mind_position_;
   ///> Baby MIND reconstructed position error
-  std::vector<std::array<double,2>> baby_mind_position_error_;
+  std::vector<std::vector<double>> baby_mind_position_error_;
   ///> Baby MIND reconstructed tangent
-  std::vector<std::array<double,2>> baby_mind_tangent_;
+  std::vector<std::vector<double>> baby_mind_tangent_;
   ///> Baby MIND reconstructed tangent error
-  std::vector<std::array<double,2>> baby_mind_tangent_error_;
+  std::vector<std::vector<double>> baby_mind_tangent_error_;
   ///> Baby MIND reconstructed charge (assuming muon +/-)
   std::vector<int> charge_;
   ///> Baby MIND reconstructed track direction (+/-)
@@ -262,23 +265,23 @@ private :
   ///> Corresponding Baby MIND track id
   std::vector<int> baby_mind_track_id_;
   ///> Number of NINJA tracker hits
-  std::vector<std::array<int,2>> number_of_hits_;
+  std::vector<std::vector<int>> number_of_hits_;
   ///> List of hit scintillator plane in NINJA tracker
-  std::vector<std::array<std::vector<int>,2>> plane_;
+  std::vector<std::vector<std::vector<int>>> plane_;
   ///> List of hit scintillator slot in NINJA tracker
-  std::vector<std::array<std::vector<int>,2>> slot_;
+  std::vector<std::vector<std::vector<int>>> slot_;
   ///> List of hit scintillator pe/tot in NINJA tracker
-  std::vector<std::array<std::vector<double>,2>> pe_;
+  std::vector<std::vector<std::vector<double>>> pe_;
   ///> Difference from the first hit bunch in NINJA tracker
   std::vector<int> bunch_difference_;
   ///> Reconstructed position for track matching
-  std::vector<std::array<double,2>> ninja_position_;
+  std::vector<std::vector<double>> ninja_position_;
   ///> Reconstructed position error for track matching
-  std::vector<std::array<double,2>> ninja_position_error_;
+  std::vector<std::vector<double>> ninja_position_error_;
   ///> Reconstructed tangent for track matching
-  std::vector<std::array<double,2>> ninja_tangent_;
+  std::vector<std::vector<double>> ninja_tangent_;
   ///> Reconstructed tangent error for track matching
-  std::vector<std::array<double,2>> ninja_tangent_error_;
+  std::vector<std::vector<double>> ninja_tangent_error_;
 
   ClassDefOverride(NTBMSummary, 3) // NT BM Summary
 };

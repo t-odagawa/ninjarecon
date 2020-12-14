@@ -70,7 +70,7 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
     os << i + 1 << " : ( "
        << obj.baby_mind_position_.at(i).at(0) << ", "
        << obj.baby_mind_position_.at(i).at(1) << " )\n";
-  }
+       }
   os << "\n"
      << "Baby MIND initial tangent = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
@@ -231,6 +231,12 @@ void NTBMSummary::SetNumberOfTracks(int number_of_tracks) {
   baby_mind_position_error_.resize(number_of_tracks_);
   baby_mind_tangent_.resize(number_of_tracks_);
   baby_mind_tangent_error_.resize(number_of_tracks_);
+  for(int i = 0; i < number_of_tracks_; i++) {
+    baby_mind_position_.at(i).resize(2);
+    baby_mind_position_error_.at(i).resize(2);
+    baby_mind_tangent_.at(i).resize(2);
+    baby_mind_tangent_error_.at(i).resize(2);
+  }
   charge_.resize(number_of_tracks_);
   direction_.resize(number_of_tracks_);
   bunch_.resize(number_of_tracks_);
@@ -286,12 +292,12 @@ void NTBMSummary::SetBabyMindPosition(int track, int view, double baby_mind_posi
   baby_mind_position_.at(track).at(view) = baby_mind_position;
 }
 
-void NTBMSummary::SetBabyMindPosition(int track, std::array<double,2> baby_mind_position) {
+void NTBMSummary::SetBabyMindPosition(int track, std::vector<double> baby_mind_position) {
   for (std::size_t view = 0; view < 2; view++)
     SetBabyMindPosition(track, view, baby_mind_position.at(view));
 }
 
-std::array<double,2> NTBMSummary::GetBabyMindPosition(int track) const {
+std::vector<double> NTBMSummary::GetBabyMindPosition(int track) const {
   if (track >= number_of_tracks_)
     throw std::out_of_range("Number of track out of range");
   return baby_mind_position_.at(track);
@@ -309,12 +315,12 @@ void NTBMSummary::SetBabyMindPositionError(int track, int view, double baby_mind
   baby_mind_position_error_.at(track).at(view) = baby_mind_position_error;
 }
 
-void NTBMSummary::SetBabyMindPositionError(int track, std::array<double,2> baby_mind_position_error) {
+void NTBMSummary::SetBabyMindPositionError(int track, std::vector<double> baby_mind_position_error) {
   for (std::size_t view = 0; view < 2; view++)
     SetBabyMindPositionError(track, view, baby_mind_position_error.at(view));
 }
 
-std::array<double,2> NTBMSummary::GetBabyMindPositionError(int track) const {
+std::vector<double> NTBMSummary::GetBabyMindPositionError(int track) const {
   if (track >= number_of_tracks_)
     throw std::out_of_range("Number of track out of range");
   return baby_mind_position_error_.at(track);
@@ -332,12 +338,12 @@ void NTBMSummary::SetBabyMindTangent(int track, int view, double baby_mind_tange
   baby_mind_tangent_.at(track).at(view) = baby_mind_tangent;
 }
 
-void NTBMSummary::SetBabyMindTangent(int track, std::array<double,2> baby_mind_tangent) {
+void NTBMSummary::SetBabyMindTangent(int track, std::vector<double> baby_mind_tangent) {
   for(std::size_t view = 0; view < 2; view++)
     SetBabyMindTangent(track, view, baby_mind_tangent.at(view));
 }
 
-std::array<double,2> NTBMSummary::GetBabyMindTangent(int track) const {
+std::vector<double> NTBMSummary::GetBabyMindTangent(int track) const {
   if (track >= number_of_tracks_)
     throw std::out_of_range("Number of track out of range");
   return baby_mind_tangent_.at(track);
@@ -355,12 +361,12 @@ void NTBMSummary::SetBabyMindTangentError(int track, int view, double baby_mind_
   baby_mind_tangent_error_.at(track).at(view) = baby_mind_tangent_error;
 }
 
-void NTBMSummary::SetBabyMindTangentError(int track, std::array<double,2> baby_mind_tangent_error) {
+void NTBMSummary::SetBabyMindTangentError(int track, std::vector<double> baby_mind_tangent_error) {
   for(std::size_t view = 0; view < 2; view++)
     SetBabyMindTangentError(track, view, baby_mind_tangent_error.at(view));
 }
 
-std::array<double,2> NTBMSummary::GetBabyMindTangentError(int track) const {
+std::vector<double> NTBMSummary::GetBabyMindTangentError(int track) const {
   if (track >= number_of_tracks_)
     throw std::out_of_range("Number of track out of range");
   return baby_mind_tangent_error_.at(track);
@@ -416,6 +422,16 @@ void NTBMSummary::SetNumberOfClusters(int number_of_ninja_clusters) {
   ninja_position_error_.resize(number_of_ninja_clusters_);
   ninja_tangent_.resize(number_of_ninja_clusters);
   ninja_tangent_error_.resize(number_of_ninja_clusters_);
+  for(int i = 0; i < number_of_ninja_clusters_; i++) {
+    number_of_hits_.at(i).resize(2);
+    plane_.at(i).resize(2);
+    slot_.at(i).resize(2);
+    pe_.at(i).resize(2);
+    ninja_position_.at(i).resize(2);
+    ninja_position_error_.at(i).resize(2);
+    ninja_tangent_.at(i).resize(2);
+    ninja_tangent_error_.at(i).resize(2);
+  }
 }
 
 int NTBMSummary::GetNumberOfClusters() const {
@@ -443,12 +459,12 @@ void NTBMSummary::SetNumberOfHits(int cluster, int view, int number_of_hits) {
   pe_.at(cluster).at(view).resize(number_of_hits_.at(cluster).at(view));
 }
 
-void NTBMSummary::SetNumberOfHits(int cluster, std::array<int,2> number_of_hits) {
+void NTBMSummary::SetNumberOfHits(int cluster, std::vector<int> number_of_hits) {
   for(std::size_t view = 0; view < 2; view++)
     SetNumberOfHits(cluster, view, number_of_hits.at(view));
 }
 
-std::array<int,2> NTBMSummary::GetNumberOfHits(int cluster) const {
+std::vector<int> NTBMSummary::GetNumberOfHits(int cluster) const {
   if (cluster >= number_of_ninja_clusters_)
     throw std::out_of_range("Number of cluster out of range");
   return number_of_hits_.at(cluster);
@@ -473,12 +489,12 @@ void NTBMSummary::SetPlane(int cluster, int view, std::vector<int> plane) {
     SetPlane(cluster, view, hit, plane.at(hit));
 }
 
-void NTBMSummary::SetPlane(int cluster, std::array<std::vector<int>,2> plane) {
+void NTBMSummary::SetPlane(int cluster, std::vector<std::vector<int>> plane) {
   for(std::size_t view = 0; view < 2; view++)
     SetPlane(cluster, view, plane.at(view));
 }
 
-std::array<std::vector<int>,2> NTBMSummary::GetPlane(int cluster) const {
+std::vector<std::vector<int>> NTBMSummary::GetPlane(int cluster) const {
   if (cluster >= number_of_ninja_clusters_)
     throw std::out_of_range("Number of cluster out of range");
   return plane_.at(cluster);
@@ -509,12 +525,12 @@ void NTBMSummary::SetSlot(int cluster, int view, std::vector<int> slot) {
     SetSlot(cluster, view, hit, slot.at(hit));
 }
 
-void NTBMSummary::SetSlot(int cluster, std::array<std::vector<int>,2> slot) {
+void NTBMSummary::SetSlot(int cluster, std::vector<std::vector<int>> slot) {
   for(std::size_t view = 0; view < 2; view++)
     SetSlot(cluster, view, slot.at(view));
 }
 
-std::array<std::vector<int>,2> NTBMSummary::GetSlot(int cluster) const {
+std::vector<std::vector<int>> NTBMSummary::GetSlot(int cluster) const {
   if (cluster >= number_of_ninja_clusters_)
     throw std::out_of_range("Number of cluster out of range");
   return slot_.at(cluster);
@@ -543,12 +559,12 @@ void NTBMSummary::SetPe(int cluster, int view, std::vector<double> pe) {
     SetPe(cluster, view, hit, pe.at(hit));
 }
 
-void NTBMSummary::SetPe(int cluster, std::array<std::vector<double>,2> pe) {
+void NTBMSummary::SetPe(int cluster, std::vector<std::vector<double>> pe) {
   for(std::size_t view = 0; view < 2; view++)
     SetPe(cluster, view, pe.at(view));
 }
 
-std::array<std::vector<double>,2> NTBMSummary::GetPe(int cluster) const {
+std::vector<std::vector<double>> NTBMSummary::GetPe(int cluster) const {
   if (cluster >= number_of_ninja_clusters_)
     throw std::out_of_range("Number of cluster out of range");
   return pe_.at(cluster);
@@ -582,12 +598,12 @@ void NTBMSummary::SetNinjaPosition(int cluster, int view, double ninja_position)
   ninja_position_.at(cluster).at(view) = ninja_position;
 }
 
-void NTBMSummary::SetNinjaPosition(int cluster, std::array<double,2> ninja_position) {
+void NTBMSummary::SetNinjaPosition(int cluster, std::vector<double> ninja_position) {
   for(std::size_t view = 0; view < 2; view++)
     SetNinjaPosition(cluster, view, ninja_position.at(view));
 }
 
-std::array<double,2> NTBMSummary::GetNinjaPosition(int cluster) const {
+std::vector<double> NTBMSummary::GetNinjaPosition(int cluster) const {
   if (cluster >= number_of_ninja_clusters_)
     throw std::out_of_range("Number of cluster out of range");
   return ninja_position_.at(cluster);
@@ -605,12 +621,12 @@ void NTBMSummary::SetNinjaPositionError(int cluster, int view, double ninja_posi
   ninja_position_error_.at(cluster).at(view) = ninja_position_error;
 }
 
-void NTBMSummary::SetNinjaPositionError(int cluster, std::array<double,2> ninja_position_error) {
+void NTBMSummary::SetNinjaPositionError(int cluster, std::vector<double> ninja_position_error) {
   for(std::size_t view = 0; view < 2; view++)
     SetNinjaPositionError(cluster, view, ninja_position_error.at(view));
 }
 
-std::array<double,2> NTBMSummary::GetNinjaPositionError(int cluster) const {
+std::vector<double> NTBMSummary::GetNinjaPositionError(int cluster) const {
   if (cluster >= number_of_ninja_clusters_)
     throw std::out_of_range("Number of cluster out of range");
   return ninja_position_error_.at(cluster);
@@ -628,12 +644,12 @@ void NTBMSummary::SetNinjaTangent(int cluster, int view, double ninja_tangent) {
   ninja_tangent_.at(cluster).at(view) = ninja_tangent;
 }
 
-void NTBMSummary::SetNinjaTangent(int cluster, std::array<double,2> ninja_tangent) {
+void NTBMSummary::SetNinjaTangent(int cluster, std::vector<double> ninja_tangent) {
   for(std::size_t view = 0; view < 2; view++)
     SetNinjaTangent(cluster, view, ninja_tangent.at(view));
 }
 
-std::array<double,2> NTBMSummary::GetNinjaTangent(int cluster) const {
+std::vector<double> NTBMSummary::GetNinjaTangent(int cluster) const {
   if (cluster >= number_of_ninja_clusters_)
     throw std::out_of_range("Number of cluster out of range");
   return ninja_tangent_.at(cluster);
@@ -651,12 +667,12 @@ void NTBMSummary::SetNinjaTangentError(int cluster, int view, double ninja_tange
   ninja_tangent_error_.at(cluster).at(view) = ninja_tangent_error;
 }
 
-void NTBMSummary::SetNinjaTangentError(int cluster, std::array<double,2> ninja_tangent_error) {
+void NTBMSummary::SetNinjaTangentError(int cluster, std::vector<double> ninja_tangent_error) {
   for(std::size_t view = 0; view < 2; view++)
     SetNinjaTangentError(cluster, view, ninja_tangent_error.at(view));
 }
 
-std::array<double,2> NTBMSummary::GetNinjaTangentError(int cluster) const {
+std::vector<double> NTBMSummary::GetNinjaTangentError(int cluster) const {
   if (cluster >= number_of_ninja_clusters_)
     throw std::out_of_range("Number of cluster out of range");
   return ninja_tangent_error_.at(cluster);
