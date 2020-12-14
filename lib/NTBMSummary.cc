@@ -408,7 +408,7 @@ int NTBMSummary::GetBunch(int track) const {
   return bunch_.at(track);
 }
 
-void NTBMSummary::SetNumberOfClusters(int number_of_ninja_clusters) {
+void NTBMSummary::SetNumberOfNinjaClusters(int number_of_ninja_clusters) {
   number_of_ninja_clusters_ = number_of_ninja_clusters;
   // Always set number of clusters before set other elements
   // related to NINJA cluster
@@ -434,7 +434,7 @@ void NTBMSummary::SetNumberOfClusters(int number_of_ninja_clusters) {
   }
 }
 
-int NTBMSummary::GetNumberOfClusters() const {
+int NTBMSummary::GetNumberOfNinjaClusters() const {
   return number_of_ninja_clusters_;
 }
 

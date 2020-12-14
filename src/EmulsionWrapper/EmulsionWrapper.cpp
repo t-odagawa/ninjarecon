@@ -1,5 +1,6 @@
 // system includes
 #include <string>
+#include <vector>
 
 // boost includes
 #include <boost/log/core.hpp>
@@ -16,6 +17,59 @@
 
 namespace logging = boost::log;
 
+/**
+ * Transfer beam information from B2BeamSummary to NTBMSummary
+ * @param ntbm_summary destination object of the transfer
+ * @param spill_summary source object of the transfer
+ */
+void TransferBeamInformation(NTBMSummary &ntbm_summary, const B2SpillSummary &spill_summary) {
+  auto &beam_summary = spill_summary.GetBeamSummary();
+  ntbm_summary.SetSpillPot(beam_summary.GetSpillPot());
+  for(std::size_t bunch = 0; bunch < 8; bunch++)
+    ntbm_summary.SetBunchPot(bunch, beam_summary.GetBunchPot(bunch));
+  ntbm_summary.SetBsdSpillNumber(beam_summary.GetBsdSpillNumber());
+  ntbm_summary.SetTimestamp(beam_summary.GetTimestamp());
+  ntbm_summary.SetBsdGoodSpillFlag(beam_summary.GetBsdGoodSpillFlag());
+  ntbm_summary.SetWagasciGoodSpillFlag(beam_summary.GetWagasciGoodSpillFlag());
+}
+
+/**
+ * Transfer Baby MIND information from B2TrackSummary to NTBMSummary
+ * @param ntbm_summary destination object of the transfer
+ * @param spill_summary source object of the transfer
+ */
+void TransferBabyMindInformation(NTBMSummary &ntbm_summary, const B2SpillSummary &spill_summary) {
+  //auto &it_track = spill_summary.BeginReconTrack();
+  auto it_track = spill_summary.BeginTrueTrack();
+  std::vector<const B2TrackSummary* > tracks;
+  while (const auto *track = it_track.Next()) {
+
+  }
+
+}
+
+/**
+ * Transfer NINJA tracker information from input file to output file
+ * @param destination destination object of the transfer
+ * @param source source object of the transfer
+ */
+void TransferNinjaTrackerInformation(NTBMSummary &destination, NTBMSummary &source) {
+  destination.SetNumberOfNinjaClusters(source.GetNumberOfNinjaClusters());
+  for (int cluster = 0; cluster < destination.GetNumberOfNinjaClusters(); cluster++) {
+    destination.SetBabyMindTrackId(cluster, source.GetBabyMindTrackId(cluster));
+    destination.SetNumberOfHits(cluster, source.GetNumberOfHits(cluster));
+    // Call number of hits function before plane/slot/pe!!
+    destination.SetPlane(cluster, source.GetPlane(cluster));
+    destination.SetSlot(cluster, source.GetSlot(cluster));
+    destination.SetPe(cluster, source.GetPe(cluster));
+    destination.SetBunchDifference(cluster, source.GetBunchDifference(cluster));
+    destination.SetNinjaPosition(cluster, source.GetNinjaPosition(cluster));
+    destination.SetNinjaPositionError(cluster, source.GetNinjaPositionError(cluster));
+    destination.SetNinjaTangent(cluster, source.GetNinjaTangent(cluster));
+    destination.SetNinjaTangentError(cluster, source.GetNinjaTangentError(cluster));
+  }
+}
+
 int main(int argc, char *argv[]) {
 
   logging::core::get()->set_filter
@@ -27,7 +81,7 @@ int main(int argc, char *argv[]) {
 
   if (argc != 3) {
     BOOST_LOG_TRIVIAL(error) << "Usage : " << argv[0]
-			     << "<input b2 file path> <output wrapped file path>";
+			     << " <input b2 file path> <output wrapped file path>";
     std::exit(1);
   }
 
@@ -54,13 +108,21 @@ int main(int argc, char *argv[]) {
     while (reader.ReadNextSpill() > 0) {
       // Beam and Baby MIND data extraction from B2SpillSummary
       auto &input_spill_summary = reader.GetSpillSummary();
+      TransferBeamInformation(output_ntbm_summary, input_spill_summary);
+      TransferBabyMindInformation(output_ntbm_summary, input_spill_summary);
+      output_ntbm_summary.SetNumberOfTracks(1); // Test
       
       // NINJA tracker data extraction from NTBMSummary
       // nttree->GetEntry(ntentry);
+      // TransferNinjaTrackerInformation(output_ntbm_summary, nt_ntbm_summary);
       ntentry++;
 
-      
+      outtree->Fill();
+
     }
+
+    outtree->Write();
+    outfile->Close();
     
   } catch (const std::runtime_error &error) {
     BOOST_LOG_TRIVIAL(fatal) << "Runtime error : " << error.what();

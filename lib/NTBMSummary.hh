@@ -130,9 +130,9 @@ public :
 
   int GetBunch(int track) const;
 
-  void SetNumberOfClusters(int number_of_clusters);
+  void SetNumberOfNinjaClusters(int number_of_ninja_clusters);
 
-  int GetNumberOfClusters() const;
+  int GetNumberOfNinjaClusters() const;
 
   void SetBabyMindTrackId(int cluster, int baby_mind_track_id);
 
