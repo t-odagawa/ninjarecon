@@ -8,10 +8,6 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
-// root includes
-#include <TString.h>
-#include <TFile.h>
-
 // B2 includes
 #include "B2Reader.hh"
 #include "B2Writer.hh"

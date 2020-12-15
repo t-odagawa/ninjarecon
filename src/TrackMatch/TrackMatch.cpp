@@ -7,8 +7,6 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
-// root includes
-
 // B2 includes
 #include "B2Reader.hh"
 #include "B2Writer.hh"
