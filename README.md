@@ -74,6 +74,12 @@ CC=$(command -v gcc) CXX=$(command -v g++) \
 
 ## Usage
 
+### File Separator
+
+This program is used for separation of the NINJA tracker raw data into a day unit file.
+Since WAGASCI-BabyMIND files are provided in a day unit, the tracker file also should be
+separated into the unit.
+
 ### Hit Converter
 
 This program is used for NINJA tracker raw data conversion to WAGASCI-BabyMIND general data format.
