@@ -11,6 +11,8 @@
 // B2 includes
 #include "B2Reader.hh"
 #include "B2Writer.hh"
+#include "B2Dimension.hh"
+#include "B2Measurement.hh"
 #include "B2HitSummary.hh"
 
 namespace logging = boost::log;
@@ -51,29 +53,47 @@ Int_t GetNinjaSpill(const B2SpillSummary &input_spill_summary, TTree *tree, Int_
  * @param array[NUM_SLOTS] NINJA tracker raw data
  */
 void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
-			  Int_t adc[NUM_SLOTS], Int_t lt[NUM_SLOTS], Int_t tt[NUM_SLOTS],
-			  UInt_t unixtime[NUM_SLOTS], Float_t pe[NUM_SLOTS],
+			  Int_t lt[NUM_SLOTS], Int_t tt[NUM_SLOTS], Float_t pe[NUM_SLOTS],
 			  Int_t view[NUM_SLOTS], Int_t pln[NUM_SLOTS], Int_t ch[NUM_SLOTS]) {
 
   for (int slot = 0; slot < NUM_SLOTS; slot++) {
-    if (pe[slot] < 2.5 || lt[NUM_SLOTS] - tt[NUM_SLOTS] < 0) continue;
+    if (pe[slot] < 2.5 || lt[NUM_SLOTS] - tt[NUM_SLOTS] < 0) continue; // cut condition TODO
     auto &output_hit_summary = output_spill_summary.AddHit();
     output_hit_summary.SetDetector(B2Detector::kNinja);
-    //output_hit_summary.SetRelativePosition();
-    //output_hit_summary.SetAbsolutePosition();
-    //output_hit_summary.SetScintillatorPosition();
     output_hit_summary.SetPlane(pln[slot]);
     output_hit_summary.SetTrueTimeNs(lt[slot]-tt[slot]); // Time over Threshold stored
+
+    TVector3 pos, err;
     switch (view[slot]) {
     case B2View::kTopView :
       output_hit_summary.SetView(B2View::kTopView);
+      B2Dimension::GetPosNinjaTracker(B2View::kTopView, (UInt_t) pln[slot], (UInt_t) ch[slot], pos);
+      B2Dimension::GetErrorNinja(B2View::kTopView, err);
+      output_hit_summary.SetRelativePosition(pos);
+      pos.SetX(pos.X() + NINJA_POS_X + NINJA_TRACKER_POS_X);
+      pos.SetY(pos.Y() + NINJA_POS_Y + NINJA_TRACKER_POS_Y);
+      pos.SetZ(pos.Z() + NINJA_POS_Z + NINJA_TRACKER_POS_Z);
+      output_hit_summary.SetAbsolutePosition(pos);
+      output_hit_summary.SetScintillatorPosition(B2Position(pos, err));
       output_hit_summary.SetScintillatorType(B2ScintillatorType::kVertical);
+      output_hit_summary.SetChannel(B2Readout::kTopReadout, ch[slot]);
       output_hit_summary.SetHighGainPeu(B2Readout::kTopReadout, pe[slot]);
+      output_hit_summary.SetTimeNs(B2Readout::kTopReadout, lt[slot]);
       break;
     case B2View::kSideView :
       output_hit_summary.SetView(B2View::kSideView);
+      B2Dimension::GetPosNinjaTracker(B2View::kTopView, (UInt_t) pln[slot], (UInt_t) ch[slot], pos);
+      B2Dimension::GetErrorNinja(B2View::kSideView, err);
+      output_hit_summary.SetRelativePosition(pos);
+      pos.SetX(pos.X() + NINJA_POS_X + NINJA_TRACKER_POS_X);
+      pos.SetY(pos.Y() + NINJA_POS_Y + NINJA_TRACKER_POS_Y);
+      pos.SetZ(pos.Z() + NINJA_POS_Z + NINJA_TRACKER_POS_Z);
+      output_hit_summary.SetAbsolutePosition(pos);
+      output_hit_summary.SetScintillatorPosition(B2Position(pos, err));
       output_hit_summary.SetScintillatorType(B2ScintillatorType::kHorizontal);
+      output_hit_summary.SetChannel(B2Readout::kSideReadout, ch[slot]);
       output_hit_summary.SetHighGainPeu(B2Readout::kSideReadout, pe[slot]);
+      output_hit_summary.SetTimeNs(B2Readout::kSideReadout, lt[slot]);
       break;
     case B2View::kUnknownView :
       BOOST_LOG_TRIVIAL(error) << "Unknown view";
@@ -144,12 +164,9 @@ int main(int argc, char *argv[]) {
 
       input_spill_summary.CloneTrue(output_spill_summary, kFALSE);
       input_spill_summary.CloneRecon(output_spill_summary, kFALSE);
-#ifdef MC
-      input_spill_summary.CloneEmulsions(output_spill_summary, kFALSE);
-#endif
       
       // Add NINJA entry as B2HitSummary
-      AddNinjaAsHitSummary(output_spill_summary, adc, lt, tt, unixtime, pe, view, pln, ch);
+      AddNinjaAsHitSummary(output_spill_summary, lt, tt, pe, view, pln, ch);
       writer.Fill();
       
     }
