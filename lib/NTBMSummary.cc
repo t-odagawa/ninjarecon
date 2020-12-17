@@ -62,7 +62,7 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "Absolute momentum = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : " << obj.momentum_.at(i) " +/- "
+    os << i + 1 << " : " << obj.momentum_.at(i) << " +/- "
        << obj.momentum_error_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }
