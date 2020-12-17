@@ -26,21 +26,61 @@ const Int_t NUM_SLOTS = 250;
  * @param start # of entry to start (not to consider already assigned entries)
  * @return corresponding entry number in the root file
  */
-Int_t GetNinjaSpill(const B2SpillSummary &input_spill_summary, TTree *tree, Int_t &start,
+Int_t GetNinjaSpill(const B2SpillSummary &input_spill_summary, TTree *tree, Int_t start,
 		    UInt_t ut[NUM_SLOTS]) {
-  
-  BOOST_LOG_TRIVIAL(debug) << "Getting NINJA entry # for BSD spill "
-			   << input_spill_summary.GetBeamSummary().GetBsdSpillNumber();
 
   const Double_t wagasci_time = input_spill_summary.GetBeamSummary().GetTimestamp();
-  
+
+  BOOST_LOG_TRIVIAL(debug) << "Getting NINJA entry # for BSD unixtime :  "
+			   << (Int_t) wagasci_time;
+
   for(int ientry = start; ientry < tree->GetEntries(); ientry++) {
     tree->GetEntry(ientry);
-    if(ut[0] == wagasci_time) {
+    if(std::fabs(((Int_t)ut[0] - (Int_t)wagasci_time)) < 2) { // Check proper cast TODO
+      BOOST_LOG_TRIVIAL(debug) << "Found NINJA entry # " << ientry
+			       << ": Unixtime : " << ut[0];
       return ientry;
     }
   }
   return B2_NON_INITIALIZED_VALUE;
+}
+
+/**
+ * Add NINJA tracker data as B2SpillSummary
+ * @param output_spill_summary WAGASCI/BabyMIND spill summary where the hits added
+ * @param array[NUM_SLOTS] NINJA tracker raw data
+ */
+void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
+			  Int_t adc[NUM_SLOTS], Int_t lt[NUM_SLOTS], Int_t tt[NUM_SLOTS],
+			  UInt_t unixtime[NUM_SLOTS], Float_t pe[NUM_SLOTS],
+			  Int_t view[NUM_SLOTS], Int_t pln[NUM_SLOTS], Int_t ch[NUM_SLOTS]) {
+
+  for (int slot = 0; slot < NUM_SLOTS; slot++) {
+    if (pe[slot] < 2.5 || lt[NUM_SLOTS] - tt[NUM_SLOTS] < 0) continue;
+    auto &output_hit_summary = output_spill_summary.AddHit();
+    output_hit_summary.SetDetector(B2Detector::kNinja);
+    //output_hit_summary.SetRelativePosition();
+    //output_hit_summary.SetAbsolutePosition();
+    //output_hit_summary.SetScintillatorPosition();
+    output_hit_summary.SetPlane(pln[slot]);
+    output_hit_summary.SetTrueTimeNs(lt[slot]-tt[slot]); // Time over Threshold stored
+    switch (view[slot]) {
+    case B2View::kTopView :
+      output_hit_summary.SetView(B2View::kTopView);
+      output_hit_summary.SetScintillatorType(B2ScintillatorType::kVertical);
+      output_hit_summary.SetHighGainPeu(B2Readout::kTopReadout, pe[slot]);
+      break;
+    case B2View::kSideView :
+      output_hit_summary.SetView(B2View::kSideView);
+      output_hit_summary.SetScintillatorType(B2ScintillatorType::kHorizontal);
+      output_hit_summary.SetHighGainPeu(B2Readout::kSideReadout, pe[slot]);
+      break;
+    case B2View::kUnknownView :
+      BOOST_LOG_TRIVIAL(error) << "Unknown view";
+      break;
+    }
+  }
+  
 }
 
 // main function
@@ -87,7 +127,7 @@ int main(int argc, char *argv[]) {
     nttree->SetBranchAddress("CH", ch);
     BOOST_LOG_TRIVIAL(info) << "done!";
 
-    Int_t ntentry = 1; // Tracker file entry
+    Int_t ntentry = 0; // Tracker file entry
     const Int_t ntentry_max = nttree->GetEntries();
 
     while (reader.ReadNextSpill() > 0 && ntentry < ntentry_max) {
@@ -95,47 +135,21 @@ int main(int argc, char *argv[]) {
       auto &input_spill_summary = reader.GetSpillSummary();
 
       // Get corresponding NINJA entry
-      ntentry = nttree->GetEntry(GetNinjaSpill(input_spill_summary, nttree, ntentry, unixtime));
+      ntentry = GetNinjaSpill(input_spill_summary, nttree, ntentry, unixtime);
+      nttree->GetEntry(ntentry);
+      ntentry++;
 
       // Create output spill summary
       auto &output_spill_summary = writer.GetSpillSummary();      
 
+      input_spill_summary.CloneTrue(output_spill_summary, kFALSE);
       input_spill_summary.CloneRecon(output_spill_summary, kFALSE);
 #ifdef MC
-      input_spill_summary.CloneTrue(output_spill_summary, kFALSE);
       input_spill_summary.CloneEmulsions(output_spill_summary, kFALSE);
 #endif
-      // Add NINJA entry as B2HitSummary
-      auto &output_hit_summary = output_spill_summary.AddHit();
-
-      for(int slot = 0; slot < NUM_SLOTS; slot++) {
-	if(pe[slot] < 2.5) continue;
-	
-	output_hit_summary.SetDetector(B2Detector::kNinja);
-	//output_hit_summary.SetRelativePosition();
-	//output_hit_summary.SetAbsolutePosition();
-	//output_hit_summary.SetScintillatorPosition();
-	output_hit_summary.SetPlane(pln[slot]);
-	//output_hit_summary.SetSlot();
-	output_hit_summary.SetTrueTimeNs(lt[slot]-tt[slot]); // Time over Threshold stored
-	switch (view[slot]) {
-	case B2View::kTopView :
-	  output_hit_summary.SetView(B2View::kTopView);
-	  output_hit_summary.SetScintillatorType(B2ScintillatorType::kVertical);
-	  output_hit_summary.SetHighGainPeu(B2Readout::kTopReadout, pe[slot]);
-	  break;
-	case B2View::kSideView :
-	  output_hit_summary.SetView(B2View::kSideView);
-	  output_hit_summary.SetScintillatorType(B2ScintillatorType::kHorizontal);
-	  output_hit_summary.SetHighGainPeu(B2Readout::kSideReadout, pe[slot]);
-	  break;
-	case B2View::kUnknownView :
-	  BOOST_LOG_TRIVIAL(error) << "Unknown view";
-	  break;
-	}
-	
-      }
       
+      // Add NINJA entry as B2HitSummary
+      AddNinjaAsHitSummary(output_spill_summary, adc, lt, tt, unixtime, pe, view, pln, ch);
       writer.Fill();
       
     }
