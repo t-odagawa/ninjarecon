@@ -29,14 +29,13 @@ const Int_t NUM_SLOTS = 250;
 Int_t GetNinjaSpill(const B2SpillSummary &input_spill_summary, TTree *tree, Int_t &start,
 		    UInt_t ut[NUM_SLOTS]) {
   
-  BOOST_LOG_TRIVIAL(debug) << "Getting NINJA entry # for BSD spill" << input_spill_summary.GetBeamSummary().GetBsdSpillNumber();
+  BOOST_LOG_TRIVIAL(debug) << "Getting NINJA entry # for BSD spill "
+			   << input_spill_summary.GetBeamSummary().GetBsdSpillNumber();
 
-  //const Double_t wagasci_time = spill_summary.GetBeamSummary().GetTimeStamp();
-  const Double_t wagasci_time = 1555000000;
+  const Double_t wagasci_time = input_spill_summary.GetBeamSummary().GetTimestamp();
   
   for(int ientry = start; ientry < tree->GetEntries(); ientry++) {
     tree->GetEntry(ientry);
-    break;
     if(ut[0] == wagasci_time) {
       return ientry;
     }

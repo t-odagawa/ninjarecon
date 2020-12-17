@@ -6,6 +6,8 @@
 
 #include <vector>
 
+#include "NTBMConst.hh"
+
 #ifdef __ROOTCLING__
 #pragma link off globals;
 #pragma link off classes;
@@ -224,7 +226,7 @@ private :
   ///> total POT of the spill
   double spill_pot_;
   ///> POT for each bunch
-  double bunch_pot_[8];
+  double bunch_pot_[NUMBER_OF_BUNCHES];
   ///> BSD spill number
   int bsd_spill_number_;
   ///> spill time stamp
