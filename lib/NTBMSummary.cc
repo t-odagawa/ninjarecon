@@ -62,22 +62,27 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "Absolute momentum = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : " << obj.momentum_.at(i);
+    os << i + 1 << " : " << obj.momentum_.at(i) " +/- "
+       << obj.momentum_error_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }
   os << "\n"
      << "Baby MIND initial position = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
     os << i + 1 << " : ( "
-       << obj.baby_mind_position_.at(i).at(0) << ", "
-       << obj.baby_mind_position_.at(i).at(1) << " )\n";
+       << obj.baby_mind_position_.at(i).at(0) << " +/- "
+       << obj.baby_mind_position_error_.at(i).at(0) << ", "
+       << obj.baby_mind_position_.at(i).at(1) << "+/-"
+       << obj.baby_mind_position_error_.at(i).at(1) << " )\n";
        }
   os << "\n"
      << "Baby MIND initial tangent = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
     os << i + 1 << " : ( "
-       << obj.baby_mind_tangent_.at(i).at(0) << ", "
-       << obj.baby_mind_tangent_.at(i).at(1) << " )\n";
+       << obj.baby_mind_tangent_.at(i).at(0) << " +/- "
+       << obj.baby_mind_tangent_error_.at(i).at(0) << ", "
+       << obj.baby_mind_tangent_.at(i).at(1) << " +/- "
+       << obj.baby_mind_tangent_error_.at(i).at(1) <<" )\n";
   }
   os << "\n"
      << "Charge = ";
@@ -155,15 +160,19 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
      << "NINJA tracker reconstructed position = ";
     for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
     os << i + 1 << " : ( "
-       << obj.ninja_position_.at(i).at(0) << ", "
-       << obj.ninja_position_.at(i).at(1) << " )\n";
+       << obj.ninja_position_.at(i).at(0) << " +/- "
+       << obj.ninja_position_error_.at(i).at(0) << ", "
+       << obj.ninja_position_.at(i).at(1) << " +/- "
+       << obj.ninja_position_error_.at(i).at(1) << " )\n";
   }
   os << "\n"
      << "NINJA tracker reconstructed tangent = ";
     for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
     os << i + 1 << " : ( "
-       << obj.ninja_tangent_.at(i).at(0) << ", "
-       << obj.ninja_tangent_.at(i).at(1) << " )\n";
+       << obj.ninja_tangent_.at(i).at(0) << " +/- "
+       << obj.ninja_tangent_error_.at(i).at(0) << ", "
+       << obj.ninja_tangent_.at(i).at(1) << " +/- "
+       << obj.ninja_tangent_error_.at(i).at(1) << " )\n";
   }
 
   return os;
