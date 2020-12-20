@@ -155,9 +155,7 @@ int main(int argc, char *argv[]) {
       auto &input_spill_summary = reader.GetSpillSummary();
 
       // Get corresponding NINJA entry
-      ntentry = GetNinjaSpill(input_spill_summary, nttree, ntentry, unixtime);
-      nttree->GetEntry(ntentry);
-      ntentry++;
+      Int_t ntentry_tmp = GetNinjaSpill(input_spill_summary, nttree, ntentry, unixtime);
 
       // Create output spill summary
       auto &output_spill_summary = writer.GetSpillSummary();      
@@ -166,7 +164,11 @@ int main(int argc, char *argv[]) {
       input_spill_summary.CloneRecon(output_spill_summary, kFALSE);
       
       // Add NINJA entry as B2HitSummary
-      AddNinjaAsHitSummary(output_spill_summary, lt, tt, pe, view, pln, ch);
+      if (ntentry_tmp > 0) {
+	nttree->GetEntry(ntentry_tmp);
+	ntentry = ntentry_tmp + 1;
+	AddNinjaAsHitSummary(output_spill_summary, lt, tt, pe, view, pln, ch);
+      }
       writer.Fill();
       
     }
