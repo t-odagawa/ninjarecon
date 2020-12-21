@@ -160,8 +160,8 @@ int main(int argc, char *argv[]) {
       // Create output spill summary
       auto &output_spill_summary = writer.GetSpillSummary();      
 
-      input_spill_summary.CloneTrue(output_spill_summary, kFALSE);
-      input_spill_summary.CloneRecon(output_spill_summary, kFALSE);
+      input_spill_summary.CloneTrue(output_spill_summary);
+      input_spill_summary.CloneRecon(output_spill_summary);
       
       // Add NINJA entry as B2HitSummary
       if (ntentry_tmp > 0) {
