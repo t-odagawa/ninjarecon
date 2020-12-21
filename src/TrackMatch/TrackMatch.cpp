@@ -13,6 +13,7 @@
 #include "B2Enum.hh"
 #include "B2Dimension.hh"
 #include "B2HitSummary.hh"
+#include "B2ClusterSummary.hh"
 
 namespace logging = boost::log;
 
@@ -94,10 +95,14 @@ int main(int argc, char *argv[]) {
       if (ninja_hits.size() > 0) 
 	CreateNinjaCluster(ninja_hits);
 
-      // Extrapolate BabyMIND cluster to the NINJA position
+      // Extrapolate BabyMIND clusters to the NINJA position
       // and get the best cluster to match each NINJA cluster
-      // auto it_cluster = input_spill_summary.BeginCluter();
-      
+      auto it_cluster = input_spill_summary.BeginReconCluster();
+      while (const auto *cluster = it_cluster.Next()) {
+	if(cluster->HasDetector(B2Detector::kBabyMind)) {
+
+	}
+      }
       // Update NINJA hit summary information?
       
       // Create output file
