@@ -1,8 +1,3 @@
-// system includes
-#include <string>
-#include <vector>
-#include <iostream>
-
 // boost includes
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
@@ -57,7 +52,8 @@ void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
 			  Int_t view[NUM_SLOTS], Int_t pln[NUM_SLOTS], Int_t ch[NUM_SLOTS]) {
 
   for (int slot = 0; slot < NUM_SLOTS; slot++) {
-    if (pe[slot] < 2.5 || lt[NUM_SLOTS] - tt[NUM_SLOTS] < 0) continue; // cut condition TODO
+    //if (pe[slot] < 2.5 || lt[NUM_SLOTS] - tt[NUM_SLOTS] < 0) continue; // cut condition TODO
+    if (pe[slot] < 2.5) continue;
     auto &output_hit_summary = output_spill_summary.AddHit();
     output_hit_summary.SetDetector(B2Detector::kNinja);
     output_hit_summary.SetPlane(pln[slot]);
