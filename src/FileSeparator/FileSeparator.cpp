@@ -1,6 +1,3 @@
-// system includes
-#include <string>
-
 // boost includes
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
