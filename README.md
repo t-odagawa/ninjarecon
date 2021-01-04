@@ -56,6 +56,15 @@ cmake .. -DB2MC_PATH=<path/to/your/wagasci/mc/installation> \
 make
 make install
 ```
+also it is useful to export environment variables in .bashrc:
+```shell script
+export CC=$(command -v gcc) // KEKCC only
+export CXX=$(command -v g++) // KEKCC only
+export BOOST_ROOT=<path/to/your/boost/installation> // KEKCC only
+export B2MCDIR=<path/to/your/wagasci/mc/installation>
+export EVENT_DISPLAYDIR=<path/to/your/wagasci/event/display/installation>
+```
+then you can avoid `B2MC_PATH` and `EVENT_DISPAY_PATH` when you cmake.
 
 ### KEKCC
 
@@ -73,6 +82,12 @@ CC=$(command -v gcc) CXX=$(command -v g++) \
 ```
 
 ## Usage
+
+First just type:
+```shell script
+<path/to/your/program/installation>
+```
+then you can find discriptions of each variable.
 
 ### File Separator
 
