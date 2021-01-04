@@ -65,29 +65,31 @@ void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
       output_hit_summary.SetView(B2View::kTopView);
       B2Dimension::GetPosNinjaTracker(B2View::kTopView, (UInt_t) pln[slot], (UInt_t) ch[slot], pos);
       B2Dimension::GetErrorNinja(B2View::kTopView, err);
+      output_hit_summary.SetScintillatorPosition(B2Position(pos, err));
       output_hit_summary.SetRelativePosition(pos);
+
       pos.SetX(pos.X() + NINJA_POS_X + NINJA_TRACKER_POS_X);
-      pos.SetY(pos.Y() + NINJA_POS_Y + NINJA_TRACKER_POS_Y);
+      pos.SetY(pos.Y() + NINJA_POS_X + NINJA_TRACKER_POS_Y);
       pos.SetZ(pos.Z() + NINJA_POS_Z + NINJA_TRACKER_POS_Z);
       output_hit_summary.SetAbsolutePosition(pos);
-      output_hit_summary.SetScintillatorPosition(B2Position(pos, err));
       output_hit_summary.SetScintillatorType(B2ScintillatorType::kVertical);
-      output_hit_summary.SetChannel(B2Readout::kTopReadout, ch[slot]);
+      output_hit_summary.SetSlot(B2Readout::kTopReadout, ch[slot]);
       output_hit_summary.SetHighGainPeu(B2Readout::kTopReadout, pe[slot]);
       output_hit_summary.SetTimeNs(B2Readout::kTopReadout, lt[slot]);
       break;
     case B2View::kSideView :
       output_hit_summary.SetView(B2View::kSideView);
-      B2Dimension::GetPosNinjaTracker(B2View::kTopView, (UInt_t) pln[slot], (UInt_t) ch[slot], pos);
+      B2Dimension::GetPosNinjaTracker(B2View::kSideView, (UInt_t) pln[slot], (UInt_t) ch[slot], pos);
       B2Dimension::GetErrorNinja(B2View::kSideView, err);
+      output_hit_summary.SetScintillatorPosition(B2Position(pos, err));
       output_hit_summary.SetRelativePosition(pos);
+      
       pos.SetX(pos.X() + NINJA_POS_X + NINJA_TRACKER_POS_X);
       pos.SetY(pos.Y() + NINJA_POS_Y + NINJA_TRACKER_POS_Y);
       pos.SetZ(pos.Z() + NINJA_POS_Z + NINJA_TRACKER_POS_Z);
       output_hit_summary.SetAbsolutePosition(pos);
-      output_hit_summary.SetScintillatorPosition(B2Position(pos, err));
       output_hit_summary.SetScintillatorType(B2ScintillatorType::kHorizontal);
-      output_hit_summary.SetChannel(B2Readout::kSideReadout, ch[slot]);
+      output_hit_summary.SetSlot(B2Readout::kSideReadout, ch[slot]);
       output_hit_summary.SetHighGainPeu(B2Readout::kSideReadout, pe[slot]);
       output_hit_summary.SetTimeNs(B2Readout::kSideReadout, lt[slot]);
       break;
