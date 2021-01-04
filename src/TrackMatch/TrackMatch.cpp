@@ -1,6 +1,7 @@
 // system includes
 #include <string>
 #include <vector>
+#include <algorithm>
 
 // booost includes
 #include <boost/log/core.hpp>
@@ -14,6 +15,8 @@
 #include "B2Dimension.hh"
 #include "B2HitSummary.hh"
 #include "B2ClusterSummary.hh"
+#include "B2TrackSummary.hh"
+#include "NTBMSummary.hh"
 
 namespace logging = boost::log;
 
@@ -42,7 +45,7 @@ double GetScintillatorPosition(const B2HitSummary* ninja_hit) {
  * Comparator for B2HitSummary vector sort
  * @param lhs left hand side object
  * @param rhs right hand side object
- * @return true if the objects should be swapped
+ * @return true if the objects should not be swapped
  */
 bool CompareNinjaHits(const B2HitSummary* lhs, const B2HitSummary* rhs) {
   if (lhs->GetView()!=rhs->GetView()) return lhs->GetView() < rhs->GetView();
@@ -52,11 +55,13 @@ bool CompareNinjaHits(const B2HitSummary* lhs, const B2HitSummary* rhs) {
 /**
  * Create NINJA tracker clusters
  */
-void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits) {
+void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
+			std::vector<NTBMSummary* > ninja_clusters) {
   std::sort(ninja_hits.begin(), ninja_hits.end(), CompareNinjaHits);
 
   for(auto itr = ninja_hits.begin(); itr != ninja_hits.end(); ++itr) {
-
+    // when scintillators have a gap, create new NINJA cluster
+    
   }
 
 
@@ -92,14 +97,15 @@ int main(int argc, char *argv[]) {
 	  ninja_hits.push_back(ninja_hit);
       }
 
+      std::vector<NTBMSummary* > my_ntbms;
       if (ninja_hits.size() > 0) 
-	CreateNinjaCluster(ninja_hits);
+	CreateNinjaCluster(ninja_hits, my_ntbms);
 
-      // Extrapolate BabyMIND clusters to the NINJA position
+      // Extrapolate BabyMIND tracks to the NINJA position
       // and get the best cluster to match each NINJA cluster
-      auto it_cluster = input_spill_summary.BeginReconCluster();
-      while (const auto *cluster = it_cluster.Next()) {
-	if(cluster->HasDetector(B2Detector::kBabyMind)) {
+      auto it_track = input_spill_summary.BeginReconTrack();
+      while (const auto *track = it_track.Next()) {
+	if(track->HasDetector(B2Detector::kBabyMind)) {
 
 	}
       }
