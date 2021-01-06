@@ -56,35 +56,28 @@ void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
     if (pe[slot] < 2.5) continue;
     auto &output_hit_summary = output_spill_summary.AddHit();
     output_hit_summary.SetDetector(B2Detector::kNinja);
+    output_hit_summary.SetPlaneGrid(B2GridPlane::kPlaneScintillator);
     output_hit_summary.SetPlane(pln[slot]);
     output_hit_summary.SetTrueTimeNs(lt[slot]-tt[slot]); // Time over Threshold stored
 
-    TVector3 pos, err;
-    switch (view[slot]) {
-    case B2View::kTopView :
-      output_hit_summary.SetView(B2View::kTopView);
-      B2Dimension::GetPosNinjaTracker(B2View::kTopView, (UInt_t) pln[slot], (UInt_t) ch[slot], pos);
-      B2Dimension::GetErrorNinja(B2View::kTopView, err);
-      output_hit_summary.SetScintillatorPosition(B2Position(pos, err));
-      output_hit_summary.SetScintillatorType(B2ScintillatorType::kVertical);
-      output_hit_summary.SetSlot(B2Readout::kTopReadout, ch[slot]);
-      output_hit_summary.SetHighGainPeu(B2Readout::kTopReadout, pe[slot]);
-      output_hit_summary.SetTimeNs(B2Readout::kTopReadout, lt[slot]);
-      break;
-    case B2View::kSideView :
-      output_hit_summary.SetView(B2View::kSideView);
-      B2Dimension::GetPosNinjaTracker(B2View::kSideView, (UInt_t) pln[slot], (UInt_t) ch[slot], pos);
-      B2Dimension::GetErrorNinja(B2View::kSideView, err);
-      output_hit_summary.SetScintillatorPosition(B2Position(pos, err));
-      output_hit_summary.SetScintillatorType(B2ScintillatorType::kHorizontal);
-      output_hit_summary.SetSlot(B2Readout::kSideReadout, ch[slot]);
-      output_hit_summary.SetHighGainPeu(B2Readout::kSideReadout, pe[slot]);
-      output_hit_summary.SetTimeNs(B2Readout::kSideReadout, lt[slot]);
-      break;
-    case B2View::kUnknownView :
-      BOOST_LOG_TRIVIAL(error) << "Unknown view";
-      break;
-    }
+    B2View ninja_view = (view[slot] == B2View::kTopView) ?
+      B2View::kTopView : B2View::kSideView;
+    output_hit_summary.SetView(ninja_view);
+    TVector3 pos, err;	
+    B2Dimension::GetPosNinjaTracker(ninja_view, (UInt_t) pln[slot], (UInt_t) ch[slot], pos);
+    B2Dimension::GetErrorNinja(ninja_view, err);
+    output_hit_summary.SetScintillatorPosition(B2Position(pos, err));
+    B2ScintillatorType scintillator_type = (view[slot] == B2View::kTopView) ?
+      B2ScintillatorType::kVertical : B2ScintillatorType::kHorizontal;
+    output_hit_summary.SetScintillatorType(scintillator_type);
+
+    std::vector<B2Readout> readouts;
+    readouts.push_back(detector_to_single_readout(B2Detector::kNinja, scintillator_type, pln[slot]));
+    for (const auto &readout : readouts) {
+      output_hit_summary.SetSlot(readout, ch[slot]);
+      output_hit_summary.SetHighGainPeu(readout, pe[slot]);
+      output_hit_summary.SetTimeNs(readout, lt[slot]);
+    } 
   }
   
 }
