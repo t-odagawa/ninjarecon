@@ -1,3 +1,6 @@
+// system includes
+#include <vector>
+
 // boost includes
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>

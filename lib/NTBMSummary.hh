@@ -247,7 +247,6 @@ private :
   ///> Baby MIND reconstructed momentum error
   std::vector<double> momentum_error_;
   ///> Baby MIND reconstructed position
-  //std::vector<std::array<double,2>> baby_mind_position_;
   std::vector<std::vector<double>> baby_mind_position_;
   ///> Baby MIND reconstructed position error
   std::vector<std::vector<double>> baby_mind_position_error_;
