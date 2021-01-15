@@ -1,6 +1,7 @@
 // system includes
 #include <vector>
 #include <algorithm>
+#include <iostream>
 
 // boost includes
 #include <boost/log/core.hpp>
@@ -64,50 +65,55 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
   int view_tmp;
   
   int number_of_ninja_clusters = 0;
-  int number_of_hits_tmp = 0;
+  std::vector<int> number_of_hits_tmp(2, 0);
   std::vector<std::vector<int>> number_of_hits = {};
-  std::vector<std::vector<int>> plane_tmp = {}, slot_tmp = {};
-  std::vector<std::vector<double>> pe_tmp = {};
+  std::vector<std::vector<int>> plane_tmp, slot_tmp;
+  std::vector<std::vector<double>> pe_tmp;
+  plane_tmp.resize(2); slot_tmp.resize(2);
+  pe_tmp.resize(2);
   std::vector<std::vector<std::vector<int>>> plane = {}, slot = {};
   std::vector<std::vector<std::vector<double>>> pe = {};
 
   for(const auto ninja_hit : ninja_hits) {
+
     // when scintillators have a gap, create new NINJA cluster
-    number_of_hits_tmp++;
-    plane_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetPlane());
-    B2ScintillatorType scintillator_type = (ninja_hit->GetView() == B2View::kTopView) ?
-      B2ScintillatorType::kVertical : B2ScintillatorType::kHorizontal;
-    B2Readout readout = detector_to_single_readout(B2Detector::kNinja, scintillator_type, ninja_hit->GetPlane());
-    //slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(readout));
-    //pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(readout));
-    
-    if ( GetScintillatorPosition(ninja_hit) + 24. < scintillator_position_tmp
-	 || ninja_hit->GetView() != view_tmp ) {
+    if ( ( ninja_hit != ninja_hits.front() )
+	&& ( GetScintillatorPosition(ninja_hit) >  scintillator_position_tmp + 24.
+	     || ninja_hit->GetView() != view_tmp || ninja_hit == ninja_hits.back()) ) {
       number_of_ninja_clusters++;
-      //number_of_hits.at(ninja_hit->GetView()).push_back(number_of_hits_tmp);
-      number_of_hits_tmp = 0;
-      plane.push_back(plane_tmp); plane_tmp.clear();
-      //slot.push_back(slot_tmp); slot_tmp.clear();
-      //pe.push_back(pe_tmp); pe_tmp.clear();
+      number_of_hits.push_back(number_of_hits_tmp); number_of_hits_tmp.assign(2,0);
+      plane.push_back(plane_tmp);
+      plane_tmp.at(0) = {}; plane_tmp.at(1) = {};
+      slot.push_back(slot_tmp);
+      slot_tmp.at(0) = {}; slot_tmp.at(1) = {};
+      pe.push_back(pe_tmp);
+      pe_tmp.at(0) = {}; pe_tmp.at(1) = {};
     }
+
+    number_of_hits_tmp.at(ninja_hit->GetView())++;
+    plane_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetPlane());
+    slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()));
+    pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetSingleReadout()));
+
     scintillator_position_tmp = GetScintillatorPosition(ninja_hit);
     view_tmp = ninja_hit->GetView();
+
   }
 
   ninja_clusters->SetNumberOfNinjaClusters(number_of_ninja_clusters);
-  //ninja_clusters->SetNumberOfHits(number_of_hits);
-  //ninja_clusters->SetPlane(plane);
-  //ninja_clusters->SetSlot(slot);
-  //ninja_clusters->SetPe(pe);
+  for(int icluster = 0; icluster < number_of_ninja_clusters; icluster++) {
+    ninja_clusters->SetNumberOfHits(icluster, number_of_hits.at(icluster));
+    ninja_clusters->SetPlane(icluster, plane.at(icluster));
+    ninja_clusters->SetSlot(icluster, slot.at(icluster));
+    ninja_clusters->SetPe(icluster, pe.at(icluster));
+  }
+
+  BOOST_LOG_TRIVIAL(debug) << "NINJA tracker clusters created";
   
 }
 
-inline std::string ExtractPathWithoutExt(const std::string &fn) {
-  std::string::size_type pos;
-  if ((pos = fn.find_last_of(".")) == std::string::npos)
-    return fn;
+void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 
-  return fn.substr(0, pos);
 }
 
 int main(int argc, char *argv[]) {
@@ -121,18 +127,15 @@ int main(int argc, char *argv[]) {
 
   if (argc != 3) {
     BOOST_LOG_TRIVIAL(error) << "Usage : " << argv[0]
-			     << " <input B2 file path> <output B2 file path>";
+			     << " <input B2 file path> <output NTBM file path>";
     std::exit(1);
   }
 
   try {
     B2Reader reader(argv[1]);
-    B2Writer writer(argv[2]);
 
-    TString ntbm_ext = "_ntbm.root";
-    TFile *ntbm_writer = new TFile(ExtractPathWithoutExt(argv[2]) + ntbm_ext,
-				   "recreate");
-    ntbm_writer->cd();
+    TFile *ntbm_file = new TFile(argv[2], "recreate");
+    ntbm_file->cd();
     TTree *ntbm_tree = new TTree("tree", "NINJA BabyMIND Original Summary");
     NTBMSummary* my_ntbm = nullptr;
     ntbm_tree->Branch("NTBMSummary", &my_ntbm);
@@ -148,8 +151,8 @@ int main(int argc, char *argv[]) {
 	  ninja_hits.push_back(ninja_hit);
       }
 
-      //if (ninja_hits.size() > 0) 
-	//CreateNinjaCluster(ninja_hits, my_ntbm);
+      if (ninja_hits.size() > 0) 
+	CreateNinjaCluster(ninja_hits, my_ntbm);
 
       // Extrapolate BabyMIND tracks to the NINJA position
       // and get the best cluster to match each BabyMIND track
@@ -162,14 +165,13 @@ int main(int argc, char *argv[]) {
       // Update NINJA hit summary information?
       
       // Create output file
-      // writer.Fill();
       ntbm_tree->Fill();
-
+      my_ntbm->Clear("C");
     }
 
-    ntbm_writer->cd();
+    ntbm_file->cd();
     ntbm_tree->Write();
-    ntbm_writer->Close();
+    ntbm_file->Close();
     
   } catch (const std::runtime_error &error) {
     BOOST_LOG_TRIVIAL(fatal) << "Runtime error : " << error.what();
