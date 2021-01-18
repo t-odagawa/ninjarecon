@@ -21,15 +21,15 @@ const Int_t NUM_SLOTS = 250;
 /**
  * Get corresponding NINJA spill number (entry number in the NINJA tracker root file)
  * to the WAGASCI spill summary
- * @param input_spill_summary WAGASCI/BabyMIND spill summary
+ * @param output_spill_summary WAGASCI/BabyMIND spill summary
  * @param tree TTree in the NINJA tracker root file
  * @param start # of entry to start (not to consider already assigned entries)
  * @return corresponding entry number in the root file
  */
-Int_t GetNinjaSpill(const B2SpillSummary &input_spill_summary, TTree *tree, Int_t start,
+Int_t GetNinjaSpill(const B2SpillSummary &output_spill_summary, TTree *tree, Int_t start,
 		    UInt_t ut[NUM_SLOTS]) {
 
-  const Double_t wagasci_time = input_spill_summary.GetBeamSummary().GetTimestamp();
+  const Double_t wagasci_time = output_spill_summary.GetBeamSummary().GetTimestamp();
 
   BOOST_LOG_TRIVIAL(debug) << "Getting NINJA entry # for BSD unixtime :  "
 			   << (Int_t) wagasci_time;
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
   try {
     B2Reader reader(argv[1]);
     TFile *ntfile = new TFile(argv[2], "read");
-    B2Writer writer(argv[3]);
+    B2Writer writer(argv[3], reader);
     BOOST_LOG_TRIVIAL(info) << "-----Settings Summary-----";
     BOOST_LOG_TRIVIAL(info) << "Reader  file : " << argv[1];
     BOOST_LOG_TRIVIAL(info) << "Tracker file : " << argv[2];
@@ -134,16 +134,10 @@ int main(int argc, char *argv[]) {
 
     while (reader.ReadNextSpill() > 0 && ntentry < ntentry_max) {
 
-      auto &input_spill_summary = reader.GetSpillSummary();
-
+      auto &output_spill_summary = writer.GetSpillSummary();
+      
       // Get corresponding NINJA entry
-      Int_t ntentry_tmp = GetNinjaSpill(input_spill_summary, nttree, ntentry, unixtime);
-
-      // Create output spill summary
-      auto &output_spill_summary = writer.GetSpillSummary();      
-
-      input_spill_summary.CloneTrue(output_spill_summary);
-      input_spill_summary.CloneRecon(output_spill_summary);
+      Int_t ntentry_tmp = GetNinjaSpill(output_spill_summary, nttree, ntentry, unixtime);
       
       // Add NINJA entry as B2HitSummary
       if (ntentry_tmp > 0) {
