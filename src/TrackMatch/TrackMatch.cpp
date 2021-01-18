@@ -1,7 +1,6 @@
 // system includes
 #include <vector>
 #include <algorithm>
-#include <iostream>
 
 // boost includes
 #include <boost/log/core.hpp>
@@ -14,6 +13,7 @@
 #include "B2Enum.hh"
 #include "B2Dimension.hh"
 #include "B2HitSummary.hh"
+#include "B2VertexSummary.hh"
 #include "B2ClusterSummary.hh"
 #include "B2TrackSummary.hh"
 #include "NTBMSummary.hh"
@@ -112,6 +112,56 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
   
 }
 
+TVector3 GetTrackInitialPosition(const B2TrackSummary *track) {
+
+  TVector3 track_initial_position = {};
+  
+  if ( track->GetType() == kPrimaryTrack ) {
+    
+  } else if ( track->GetType() == kBabyMind3DTrack ) {
+    track_initial_position = track->GetInitialPosition().GetValue();
+  } else {
+
+  }
+}
+
+/**
+ * Track matching between Baby MIND and NINJA tracker using x/y separated NTBMSummary
+ * and Baby MIND B2TrackSummary
+ * @param track B2TrackSummary object of Baby MIND track
+ * @param ntbm NTBMSummary object created in the CreateNinjaCluster function
+ */
+void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm) {
+
+  int track_type;
+  if ( track->GetType() == kSandMuon ) track_type = 1;
+  else if ( track->GetType() == kPrimaryTrack ) track_type = -1;
+  else track_type = 0;
+
+  int momentum_type = 0;
+  double momentum = track->GetInitialAbsoluteMomentum().GetValue();
+  double momentum_error = track->GetInitialAbsoluteMomentum().GetError();
+
+  TVector3 track_initial_position = track->GetInitialPosition().GetValue();
+  TVector3 track_initial_position_error = track->GetInitialPosition().GetError();
+  TVector3 track_initial_direction = track->GetFinalDirection().GetValue();
+  TVector3 track_initial_direction_error = track->GetFinalDirection().GetError();
+
+  int charge = 1;
+  int direction = 1; // positive or negative
+  int bunch = 0;
+  
+  for (int intbmcluster = 0; intbmcluster < ntbm->GetNumberOfNinjaClusters(); intbmcluster++) {
+
+  }
+  
+}
+
+/**
+ * Use Baby MIND information, reconstruct position (and angle) for matching
+ * between NINJA tracker and Emulsion shifter
+ * @param ntbmsummary NTBMSummary object after the MatchBabyMindTrack function
+ */
 void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 
 }
@@ -156,13 +206,18 @@ int main(int argc, char *argv[]) {
 
       // Extrapolate BabyMIND tracks to the NINJA position
       // and get the best cluster to match each BabyMIND track
+      int number_of_tracks = 0;
       auto it_track = input_spill_summary.BeginReconTrack();
       while (const auto *track = it_track.Next()) {
 	if(track->HasDetector(B2Detector::kBabyMind)) {
-
+	  number_of_tracks++;
+	  MatchBabyMindTrack(track, my_ntbm);
 	}
       }
-      // Update NINJA hit summary information?
+      my_ntbm->SetNumberOfTracks(number_of_tracks);
+      
+      // Update NINJA hit summary information
+      ReconstructNinjaPosition(my_ntbm);
       
       // Create output file
       ntbm_tree->Fill();
