@@ -187,7 +187,7 @@ void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMS
  */
 void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 
-  for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaCluster(); i++) {
+  for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaClusters(); icluster++) {
 
   }
   
