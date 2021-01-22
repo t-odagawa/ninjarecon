@@ -1,7 +1,7 @@
 # Tools for track matching between WAGASCI/BabyMIND & NINJA at J-PARC (v0.0.1)
 
 This is a set of tools for (muon) track matching between WAGASCI/BabyMIND detectors
-and NINJA detectors (scintillation tracker only?).
+and NINJA detectors (scintillation tracker only).
 
 ## External dependencies (same as WAGASCI+BabyMIND Geant4 simulation)
 
