@@ -112,48 +112,71 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
   
 }
 
-TVector3 GetTrackInitialPosition(const B2TrackSummary *track) {
+/**
+ * Get incidenct track position on the upstream surface of Baby MIND
+ * calculation is changed depending on the track type
+ * @param track B2TrackSummary object
+ * @return track position on the upstream surface of Baby MIND
+ */
+TVector3 CalculateTrackInitialPosition(const B2TrackSummary *track) {
 
   TVector3 track_initial_position = {};
   
   if ( track->GetType() == kPrimaryTrack ) {
-    
+    TVector3 track_direction = track->GetFinalDirection().GetValue();    
+    const Double_t bm_pos_z = 2.85 * m - 2. * m;
+    Double_t x = track->GetInitialPosition().GetValue().X()
+      + track_direction.X() * (bm_pos_z - track->GetInitialPosition().GetValue().Z());
+    Double_t y = track->GetInitialPosition().GetValue().Y()
+      + track_direction.Y() * (bm_pos_z - track->GetInitialPosition().GetValue().Z());
+    track_initial_position.SetX(x);
+    track_initial_position.SetY(y);
+    track_initial_position.SetZ(bm_pos_z);
   } else if ( track->GetType() == kBabyMind3DTrack ) {
     track_initial_position = track->GetInitialPosition().GetValue();
   } else {
-
+    BOOST_LOG_TRIVIAL(error) << "Reconstructed Track Summary is not in NINJA interest";
   }
+
+  return track_initial_position;
+  
 }
 
 /**
  * Track matching between Baby MIND and NINJA tracker using x/y separated NTBMSummary
  * and Baby MIND B2TrackSummary
  * @param track B2TrackSummary object of Baby MIND track
- * @param ntbm NTBMSummary object created in the CreateNinjaCluster function
+ * @param ntbm_in NTBMSummary object created in the CreateNinjaCluster function
+ * @param ntbm_out NTBMSummary object for 3D track matching
  */
-void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm) {
+void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMSummary* ntbm_out) {
 
   int track_type;
   if ( track->GetType() == kSandMuon ) track_type = 1;
   else if ( track->GetType() == kPrimaryTrack ) track_type = -1;
   else track_type = 0;
 
+
+  
   int momentum_type = 0;
   double momentum = track->GetInitialAbsoluteMomentum().GetValue();
   double momentum_error = track->GetInitialAbsoluteMomentum().GetError();
 
-  TVector3 track_initial_position = track->GetInitialPosition().GetValue();
-  TVector3 track_initial_position_error = track->GetInitialPosition().GetError();
+  TVector3 track_initial_position = CalculateTrackInitialPosition(track);
+  //TVector3 track_initial_position_error = track->GetInitialPosition().GetError(); // Baby MIND position erro TODO
   TVector3 track_initial_direction = track->GetFinalDirection().GetValue();
   TVector3 track_initial_direction_error = track->GetFinalDirection().GetError();
 
   int charge = 1;
   int direction = 1; // positive or negative
   int bunch = 0;
-  
-  for (int intbmcluster = 0; intbmcluster < ntbm->GetNumberOfNinjaClusters(); intbmcluster++) {
+
+  // Get the nearest X/Y NINJA cluster respectively
+  for (int intbmcluster = 0; intbmcluster < ntbm_in->GetNumberOfNinjaClusters(); intbmcluster++) {
 
   }
+
+  // Push back output NTBMSummary object
   
 }
 
@@ -164,6 +187,10 @@ void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm) {
  */
 void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 
+  for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaCluster(); i++) {
+
+  }
+  
 }
 
 int main(int argc, char *argv[]) {
@@ -187,6 +214,7 @@ int main(int argc, char *argv[]) {
     TFile *ntbm_file = new TFile(argv[2], "recreate");
     ntbm_file->cd();
     TTree *ntbm_tree = new TTree("tree", "NINJA BabyMIND Original Summary");
+    NTBMSummary* ntbm_tmp = nullptr;
     NTBMSummary* my_ntbm = nullptr;
     ntbm_tree->Branch("NTBMSummary", &my_ntbm);
 
@@ -201,17 +229,20 @@ int main(int argc, char *argv[]) {
 	  ninja_hits.push_back(ninja_hit);
       }
 
+      // Create X/Y NINJA clusters
       if (ninja_hits.size() > 0) 
-	CreateNinjaCluster(ninja_hits, my_ntbm);
+	CreateNinjaCluster(ninja_hits, ntbm_tmp);
 
       // Extrapolate BabyMIND tracks to the NINJA position
       // and get the best cluster to match each BabyMIND track
       int number_of_tracks = 0;
       auto it_track = input_spill_summary.BeginReconTrack();
       while (const auto *track = it_track.Next()) {
-	if(track->HasDetector(B2Detector::kBabyMind)) {
+	if (track->HasDetector(B2Detector::kBabyMind)) {
 	  number_of_tracks++;
-	  MatchBabyMindTrack(track, my_ntbm);
+	  // if (NinjaHitExpected(track)) {
+	  MatchBabyMindTrack(track, ntbm_tmp, my_ntbm);
+	  //}
 	}
       }
       my_ntbm->SetNumberOfTracks(number_of_tracks);
@@ -221,6 +252,7 @@ int main(int argc, char *argv[]) {
       
       // Create output file
       ntbm_tree->Fill();
+      ntbm_tmp->Clear("C");
       my_ntbm->Clear("C");
     }
 
