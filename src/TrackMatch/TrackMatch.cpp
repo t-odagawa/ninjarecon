@@ -16,6 +16,7 @@
 #include "B2VertexSummary.hh"
 #include "B2ClusterSummary.hh"
 #include "B2TrackSummary.hh"
+#include "B2EventSummary.hh"
 #include "NTBMSummary.hh"
 
 namespace logging = boost::log;
@@ -197,7 +198,7 @@ int main(int argc, char *argv[]) {
 
   logging::core::get()->set_filter
     (
-     logging::trivial::severity >= logging::trivial::info
+     logging::trivial::severity >= logging::trivial::debug
      );
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Track Matching Start==========";
@@ -214,12 +215,12 @@ int main(int argc, char *argv[]) {
     TFile *ntbm_file = new TFile(argv[2], "recreate");
     ntbm_file->cd();
     TTree *ntbm_tree = new TTree("tree", "NINJA BabyMIND Original Summary");
-    NTBMSummary* ntbm_tmp = nullptr;
     NTBMSummary* my_ntbm = nullptr;
     ntbm_tree->Branch("NTBMSummary", &my_ntbm);
 
     while (reader.ReadNextSpill() > 0) {
       auto &input_spill_summary = reader.GetSpillSummary();
+      NTBMSummary* ntbm_tmp = new NTBMSummary();
 
       // Create NINJA tracker hit cluster
       auto it_hit = input_spill_summary.BeginHit();
@@ -230,20 +231,24 @@ int main(int argc, char *argv[]) {
       }
 
       // Create X/Y NINJA clusters
-      if (ninja_hits.size() > 0) 
+      if (ninja_hits.size() > 0) {
+	auto i = input_spill_summary.BeginTrueEvent();
+	auto *event = i.Next();
+	BOOST_LOG_TRIVIAL(debug) << event->GetEventId();
 	CreateNinjaCluster(ninja_hits, ntbm_tmp);
+      }
 
       // Extrapolate BabyMIND tracks to the NINJA position
       // and get the best cluster to match each BabyMIND track
       int number_of_tracks = 0;
       auto it_track = input_spill_summary.BeginReconTrack();
       while (const auto *track = it_track.Next()) {
-	if (track->HasDetector(B2Detector::kBabyMind)) {
+	//if (track->HasDetector(B2Detector::kBabyMind)) {
 	  number_of_tracks++;
 	  // if (NinjaHitExpected(track)) {
-	  MatchBabyMindTrack(track, ntbm_tmp, my_ntbm);
+	  //MatchBabyMindTrack(track, ntbm_tmp, my_ntbm);
 	  //}
-	}
+	  //}
       }
       my_ntbm->SetNumberOfTracks(number_of_tracks);
       
@@ -252,7 +257,6 @@ int main(int argc, char *argv[]) {
       
       // Create output file
       ntbm_tree->Fill();
-      ntbm_tmp->Clear("C");
       my_ntbm->Clear("C");
     }
 
