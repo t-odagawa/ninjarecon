@@ -110,7 +110,28 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
   }
 
   BOOST_LOG_TRIVIAL(debug) << "NINJA tracker clusters created";
-  
+}
+
+/**
+ * Original function instead of B2HitsSet::HasDetector() as reconstructed track summary
+ * does not have detector information on its own
+ * @param track reconstructed B2TrackSummary object
+ * @param det detector id
+ * @return true if the object has hits inside the detector
+ */
+bool MyHasDetector(const B2TrackSummary *track, B2Detector det) {
+
+  bool ret = false;
+
+  auto it_cluster = track->BeginCluster();
+  while (const auto *cluster = it_cluster.Next()) {
+    auto it_hit = cluster->BeginHit();
+    while (const auto *hit = it_hit.Next()) {
+      if (hit->GetDetectorId() == det) ret = true;
+    }
+  }
+
+  return ret;
 }
 
 /**
@@ -189,7 +210,16 @@ void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMS
 void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 
   for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaClusters(); icluster++) {
-
+    // Angle Reconstruction
+    std::vector<double> tangent(2);
+    tangent.at(0) = 0;
+    tangent.at(1) = 0;
+    ntbmsummary->SetNinjaTangent(icluster, tangent);
+    // Position Reconstruction using reconstructed angle
+    std::vector<double> position(2);
+    position.at(0) = 0;
+    position.at(1) = 0;
+    ntbmsummary->SetNinjaPosition(icluster, position);
   }
   
 }
@@ -243,12 +273,12 @@ int main(int argc, char *argv[]) {
       int number_of_tracks = 0;
       auto it_track = input_spill_summary.BeginReconTrack();
       while (const auto *track = it_track.Next()) {
-	//if (track->HasDetector(B2Detector::kBabyMind)) {
+	if (MyHasDetector(track, B2Detector::kBabyMind)) {
 	  number_of_tracks++;
 	  // if (NinjaHitExpected(track)) {
 	  //MatchBabyMindTrack(track, ntbm_tmp, my_ntbm);
 	  //}
-	  //}
+	}
       }
       my_ntbm->SetNumberOfTracks(number_of_tracks);
       
