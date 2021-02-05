@@ -694,4 +694,50 @@ double NTBMSummary::GetNinjaTangentError(int cluster, int view) const {
   return GetNinjaTangentError(cluster).at(view);
 }
 
+void NTBMSummary::SetTruePosition(int cluster, int view, double true_position) {
+  if (view >= NUMBER_OF_VIEWS)
+    throw std::out_of_range("View out of range");
+  true_position_.at(cluster).at(view) = true_position;
+}
+
+void NTBMSummary::SetTruePosition(int cluster, std::vector<double> true_position) {
+  for(std::size_t view = 0; view < NUMBER_OF_VIEWS; view++)
+    SetTruePosition(cluster, view, true_position.at(view));
+}
+
+std::vector<double> NTBMSummary::GetTruePosition(int cluster) const {
+  if (cluster >= number_of_ninja_clusters_)
+    throw std::out_of_range("Number of cluster out of range");
+  return true_position_.at(cluster);
+}
+
+double NTBMSummary::GetTruePosition(int cluster, int view) const {
+  if (view >= NUMBER_OF_VIEWS)
+    throw std::out_of_range("View out of range");
+  return GetTruePosition(cluster).at(view);
+}
+
+void NTBMSummary::SetTrueTangent(int cluster, int view, double true_tangent) {
+  if (view >= NUMBER_OF_VIEWS)
+    throw std::out_of_range("View out of range");
+  true_tangent_.at(cluster).at(view) = true_tangent;
+}
+
+void NTBMSummary::SetTrueTangent(int cluster, std::vector<double> true_tangent) {
+  for(std::size_t view = 0; view < NUMBER_OF_VIEWS; view++)
+    SetTrueTangent(cluster, view, true_tangent.at(view));
+}
+
+std::vector<double> NTBMSummary::GetTrueTangent(int cluster) const {
+  if (cluster >= number_of_ninja_clusters_)
+    throw std::out_of_range("Number of cluster out of range");
+  return true_tangent_.at(cluster);
+}
+
+double NTBMSummary::GetTrueTangent(int cluster, int view) const {
+  if (view >= NUMBER_OF_VIEWS)
+    throw std::out_of_range("View out of range");
+  return GetTrueTangent(cluster).at(view);
+}
+
 ClassImp(NTBMSummary)

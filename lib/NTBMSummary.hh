@@ -220,6 +220,22 @@ public :
 
   double GetNinjaTangentError(int cluster, int view) const;
 
+  void SetTruePosition(int cluster, int view, double true_position);
+
+  void SetTruePosition(int cluster, std::vector<double> true_position);
+
+  std::vector<double> GetTruePosition(int cluster) const;
+
+  double GetTruePosition(int cluster, int view) const;
+
+  void SetTrueTangent(int cluster, int view, double true_tangent);
+
+  void SetTrueTangent(int cluster, std::vector<double> true_tangent);
+
+  std::vector<double> GetTrueTangent(int cluster) const;
+
+  double GetTrueTangent(int cluster, int view) const;
+
 private :
 
   ///> Beam information extracted from B2BeamSummary
@@ -283,8 +299,12 @@ private :
   std::vector<std::vector<double>> ninja_tangent_;
   ///> Reconstructed tangent error for track matching
   std::vector<std::vector<double>> ninja_tangent_error_;
+  ///> True position
+  std::vector<std::vector<double>> true_position_;
+  ///> True tangent
+  std::vector<std::vector<double>> true_tangent_;
 
-  ClassDefOverride(NTBMSummary, 3) // NT BM Summary
+  ClassDefOverride(NTBMSummary, 4) // NT BM Summary
 };
 
 #endif
