@@ -23,7 +23,7 @@ target_link_libraries(libNTBM PUBLIC
 			      Boost::log)
 
 # list all target headers
-file(GLOB B2_LIB_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/*.hh")
+file(GLOB NTBM_LIB_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/*.hh")
 set_target_properties(libNTBM PROPERTIES PUBLIC_HEADER "${NTBM_LIB_INCLUDES}")
 
 # install the library in the lib folder

@@ -9,3 +9,6 @@ target_link_libraries(HitConverter
 	${Boost_LIBRARIES}
 	${B2MC_LIBRARY}
 )
+
+# install the execute in the bin folder
+install(TARGETS HitConverter DESTINATION "${CMAKE_INSTALL_BINDIR}/HitConverter")

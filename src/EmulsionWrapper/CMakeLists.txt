@@ -9,8 +9,7 @@ target_link_libraries(EmulsionWrapper
 	${Boost_LIBRARIES}
 	${B2MC_LIBRARY}
 	libNTBM
-#	libEmulsionWrapper
 )
 
-# install the library in the lib folder
-#install(TARGETS NTBM DESTINATION "${CMAKE_INSTALL_BINDIR}")
+# install the execute in the bin folder
+install(TARGETS EmulsionWrapper DESTINATION "${CMAKE_INSTALL_BINDIR}/EmulsionWrapper")

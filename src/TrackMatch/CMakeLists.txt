@@ -11,3 +11,5 @@ target_link_libraries(TrackMatch
 	libNTBM
 )
 
+# install the execute in the bin folder
+install(TARGETS TrackMatch DESTINATION "${CMAKE_INSTALL_BINDIR}/TrackMatch")
