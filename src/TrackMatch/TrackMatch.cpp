@@ -79,7 +79,7 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
 
     // when scintillators have a gap, create new NINJA cluster
     if ( ( ninja_hit != ninja_hits.front() )
-	&& ( GetScintillatorPosition(ninja_hit) >  scintillator_position_tmp + 24.
+	&& ( GetScintillatorPosition(ninja_hit) >  scintillator_position_tmp + NINJA_TRACKER_SCI_WIDTH
 	     || ninja_hit->GetView() != view_tmp || ninja_hit == ninja_hits.back()) ) {
       number_of_ninja_clusters++;
       number_of_hits.push_back(number_of_hits_tmp); number_of_hits_tmp.assign(2,0);
@@ -130,7 +130,6 @@ bool MyHasDetector(const B2TrackSummary *track, B2Detector det) {
       if (hit->GetDetectorId() == det) ret = true;
     }
   }
-
   return ret;
 }
 
@@ -165,6 +164,29 @@ TVector3 CalculateTrackInitialPosition(const B2TrackSummary *track) {
 }
 
 /**
+ * Check if the reconstructed track summary expected to have hits
+ * in the NINJA tracker
+ * @param track B2TrackSummary object of Reconstructed Baby MIND track
+ * @return true if the track expected to have hits else false
+ */
+bool NinjaHitExpected(const B2TrackSummary *track) {
+  switch(track->GetType()) {
+  case kBabyMind3DTrack :
+    // only if extrapolated position is inside NINJA tracker
+    /*if() return true;
+    else return false;
+    break;*/
+  case kPrimaryTrack :
+    // only if extrapolated position is inside NINJA tracker
+    // and not downstream WAGASCI interaction
+    /*if() return true;
+    else return false;
+    break;*/
+  default :
+    BOOST_LOG_TRIVIAL(debug) << "Reconstructed Track Summary is not in NINJA interest";
+  }
+}
+/**
  * Track matching between Baby MIND and NINJA tracker using x/y separated NTBMSummary
  * and Baby MIND B2TrackSummary
  * @param track B2TrackSummary object of Baby MIND track
@@ -173,21 +195,27 @@ TVector3 CalculateTrackInitialPosition(const B2TrackSummary *track) {
  */
 void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMSummary* ntbm_out) {
 
+  /*
   int track_type;
-  if ( track->GetType() == kSandMuon ) track_type = 1;
-  else if ( track->GetType() == kPrimaryTrack ) track_type = -1;
-  else track_type = 0;
-
-
-  
+  switch(track->GetType()) {
+  case kSandMuonMatching :
+    track_type = 1;
+    break;
+  case kPrimaryTrack :
+    track_type = -1;
+    break;
+  default :
+    track_type = 0;
+  }
+  */
   int momentum_type = 0;
   double momentum = track->GetInitialAbsoluteMomentum().GetValue();
   double momentum_error = track->GetInitialAbsoluteMomentum().GetError();
 
   TVector3 track_initial_position = CalculateTrackInitialPosition(track);
-  //TVector3 track_initial_position_error = track->GetInitialPosition().GetError(); // Baby MIND position erro TODO
+  //TVector3 track_initial_position_error = track->GetInitialPosition().GetError(); // Baby MIND position error TODO
   TVector3 track_initial_direction = track->GetFinalDirection().GetValue();
-  TVector3 track_initial_direction_error = track->GetFinalDirection().GetError();
+  TVector3 track_initial_direction_error = track->GetFinalDirection().GetError(); // Baby MIND tangent error TODO
 
   int charge = 1;
   int direction = 1; // positive or negative
@@ -219,6 +247,34 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
     std::vector<double> position(2);
     position.at(0) = 0;
     position.at(1) = 0;
+
+    for(int iview = 0; iview < 2; iview++) {
+      for (int iplane = 0; iplane < NINJA_TRACKER_NUM_PLANES; iplane++) {
+	for (int islot = 0; islot < NINJA_TRACKER_NUM_CHANNELS_ONE_PLANE; islot++) {
+	  for (int ivertex = 0; ivertex < 4; ivertex++) { // Number of vertices in one scintillator bar
+	    
+	    TVector3 start_of_track;
+	    B2Dimension::GetPosNinjaTracker((B2View)iview, iplane, islot, start_of_track);
+	    switch(iview) {
+	    case 0 :
+	      start_of_track.SetX(start_of_track.X()
+				  + NINJA_TRACKER_SCI_WIDTH / 2. * (-1 + 2 * (ivertex/2) ));
+	      break;
+	    case 1 :
+	      start_of_track.SetY(start_of_track.Y()
+				  + NINJA_TRACKER_SCI_WIDTH / 2. * (-1 + 2 * (ivertex/2) ));
+	      break;
+	    }
+	    bool plane_condition = {false};
+
+	    // Check the line can make a hit pattern
+	    for (int jplane = 0; jplane < NINJA_TRACKER_NUM_PLANES; jplane++) {
+
+	    }
+	  }
+	}
+      }
+    }
     ntbmsummary->SetNinjaPosition(icluster, position);
   }
   
@@ -275,9 +331,9 @@ int main(int argc, char *argv[]) {
       while (const auto *track = it_track.Next()) {
 	if (MyHasDetector(track, B2Detector::kBabyMind)) {
 	  number_of_tracks++;
-	  // if (NinjaHitExpected(track)) {
-	  //MatchBabyMindTrack(track, ntbm_tmp, my_ntbm);
-	  //}
+	  if (NinjaHitExpected(track)) {
+	    //MatchBabyMindTrack(track, ntbm_tmp, my_ntbm);
+	  }
 	}
       }
       my_ntbm->SetNumberOfTracks(number_of_tracks);
