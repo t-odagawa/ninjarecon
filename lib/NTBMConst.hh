@@ -23,6 +23,11 @@ static const double NINJA_TRACKER_GAP = 25. * 4 / 3 - 24.;
 ///> Thickness of NINJA tracker scintillator bar
 static const double NINJA_TRACKER_SCI_THICK = 3.;
 
+///> Offset from the 4th layer in NINJA tracker in X/Y direction
+static const double NINJA_TRACKER_OFFSET_XY[NUMBER_OF_PLANES] = {25. * 5 / 6, 25. / 6, 25. * 2 / 3, 0.};
+///> Offset from the 1st layer in NINJA tracker in Z direction
+static const double NINJA_TRACKER_OFFSET_Z[NUMBER_OF_PLANES] = {0., 6., 9., 15.};
+
 ///> Photoelectron threshold for the NINJA tracker
 static const double PE_THRESHOLD = 2.5;
 ///> Time over threshold threshold for the NINJA tracker

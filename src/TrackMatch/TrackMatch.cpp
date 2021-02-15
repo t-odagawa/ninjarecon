@@ -1,5 +1,6 @@
 // system includes
 #include <vector>
+#include <numeric>
 #include <algorithm>
 
 // boost includes
@@ -185,6 +186,8 @@ bool NinjaHitExpected(const B2TrackSummary *track) {
   default :
     BOOST_LOG_TRIVIAL(debug) << "Reconstructed Track Summary is not in NINJA interest";
   }
+
+  return true; // TODO
 }
 /**
  * Track matching between Baby MIND and NINJA tracker using x/y separated NTBMSummary
@@ -277,8 +280,16 @@ bool IsInGap(double min, double max, int view, int plane, int slot) {
     BOOST_LOG_TRIVIAL(error) << "Unknown view";
     std::exit(1);
   }
-  return position_xy + NINJA_TRACKER_SCI_WIDTH / 2. <= min
-    && max <= position_xy - NINJA_TRACKER_SCI_WIDTH / 2.;
+
+  switch (slot) {
+  case 0 :
+    return max <= position_xy - NINJA_TRACKER_SCI_WIDTH / 2.;
+  case NINJA_TRACKER_NUM_CHANNELS_ONE_PLANE - 1 :
+    return position_xy + NINJA_TRACKER_SCI_WIDTH / 2. <= min;
+  default : 
+    return position_xy + NINJA_TRACKER_SCI_WIDTH / 2. <= min
+      && max <= position_xy - NINJA_TRACKER_SCI_WIDTH / 2.;
+  }
 }
 
 
@@ -291,8 +302,10 @@ bool IsInGap(double min, double max, int view, int plane, int slot) {
  * @param vertex vertex position of the track starting point
  */
 double GetTrackAreaMin(double pos, double tangent, int iplane, int jplane, int vertex) {
-  if (tangent > 0) return pos + tangent * (0.);
-  else return pos + tangent * (0.);
+  if (tangent > 0) return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
+					   + NINJA_TRACKER_SCI_THICK * (0 - vertex % 2));
+  else return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
+			       + NINJA_TRACKER_SCI_THICK * (1 - vertex % 2));
 }
 
 /**
@@ -304,8 +317,21 @@ double GetTrackAreaMin(double pos, double tangent, int iplane, int jplane, int v
  * @param vertex vertex position of the track starting point
  */
 double GetTrackAreaMax(double pos, double tangent, int iplane, int jplane, int vertex) {
-  if (tangent > 0) return pos + tangent * (0.);
-  else return pos + tangent * (0.);
+  if (tangent > 0) return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
+					   + NINJA_TRACKER_SCI_THICK * (1 - vertex % 2));
+  else return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
+			       + NINJA_TRACKER_SCI_THICK * (0 - vertex % 2));
+}
+
+/**
+ * Get boolean if the normal track analysis is possible
+ * @param condition four element array of boolean
+ */
+bool IsGoodTrack(bool *condition) {
+  bool ret = true;
+  for (int iplane = 0; iplane < NINJA_TRACKER_NUM_PLANES; iplane++)
+    ret = ret && condition[iplane];
+  return ret;
 }
 
 /**
@@ -321,10 +347,11 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
     tangent.at(0) = 0;
     tangent.at(1) = 0;
     ntbmsummary->SetNinjaTangent(icluster, tangent);
+
     // Position Reconstruction using reconstructed angle
     std::vector<double> position(2);
-    position.at(0) = 0;
-    position.at(1) = 0;
+
+    std::vector<std::vector<double>> position_list = {}; // vector where good position candidates are filled
 
     for(int iview = 0; iview < 2; iview++) {
       for (int iplane = 0; iplane < NINJA_TRACKER_NUM_PLANES; iplane++) {
@@ -334,7 +361,7 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 	    TVector3 start_of_track;
 	    B2Dimension::GetPosNinjaTracker((B2View)iview, iplane, islot, start_of_track);
 	    double start_of_track_xy;
-	    switch(iview) {
+	    switch (iview) {
 	    case 0 :
 	      start_of_track_xy = start_of_track.X()
 		+ NINJA_TRACKER_SCI_WIDTH / 2. * ( -1 + 2 * (ivertex/2) );
@@ -344,9 +371,10 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 		+ NINJA_TRACKER_SCI_WIDTH / 2. * ( -1 + 2 * (ivertex/2) );
 	      break;
 	    }
-	    bool plane_condition[NINJA_TRACKER_NUM_PLANES] = {false};
-
+	    
 	    // Check the line can make a hit pattern
+	    bool plane_condition[NINJA_TRACKER_NUM_PLANES] = {false};
+	    
 	    for (int jplane = 0; jplane < NINJA_TRACKER_NUM_PLANES; jplane++) {
 
 	      double track_area_min = GetTrackAreaMin(start_of_track_xy, tangent.at(iview),
@@ -363,7 +391,7 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 		  }
 		} // ihit
 	      } else {
-		for (int jslot = 0; jslot < NINJA_TRACLER_NUM_CHANNELS_ONE_PLANE; jslot++) {
+		for (int jslot = 0; jslot < NINJA_TRACKER_NUM_CHANNELS_ONE_PLANE; jslot++) {
 		  plane_condition[jplane] = plane_condition[jplane] || IsInGap(track_area_min, track_area_max,
 									       iview, jplane, jslot);
 		}
@@ -377,6 +405,31 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 	} // islot
       } // iplane
     } // iview
+
+    // Use lines with good plane condition and reconstruct position
+    for (int iview = 0; iview < 2; iview++) {
+      if (position_list.at(iview).size() > 0)
+	position.at(iview) = (position_list.at(iview).front() + position_list.at(iview).back()) / 2.;
+      else { // average of all scintillator bar position in the cluster
+	position.at(iview) = 0.;
+	for (int ihit = 0; ihit < ntbmsummary->GetNumberOfHits(icluster, iview); ihit++) {
+	  TVector3 scintillator_position;
+	  B2Dimension::GetPosNinjaTracker((B2View)iview, ntbmsummary->GetPlane(icluster, iview, ihit),
+					  ntbmsummary->GetSlot(icluster, iview, ihit),
+					  scintillator_position);
+	  switch (iview) {
+	  case B2View::kTopView :
+	    position.at(iview) += scintillator_position.X();
+	    break;
+	  case B2View::kSideView :
+	    position.at(iview) += scintillator_position.Y();
+	    break;
+	  } // switch
+	} // ihit
+	position.at(iview) /= ntbmsummary->GetNumberOfHits(icluster, iview);
+      } // fi
+    } // iview
+    
     ntbmsummary->SetNinjaPosition(icluster, position);
   } // icluster
   
