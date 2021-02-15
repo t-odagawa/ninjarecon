@@ -195,19 +195,6 @@ bool NinjaHitExpected(const B2TrackSummary *track) {
  */
 void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMSummary* ntbm_out) {
 
-  /*
-  int track_type;
-  switch(track->GetType()) {
-  case kSandMuonMatching :
-    track_type = 1;
-    break;
-  case kPrimaryTrack :
-    track_type = -1;
-    break;
-  default :
-    track_type = 0;
-  }
-  */
   int momentum_type = 0;
   double momentum = track->GetInitialAbsoluteMomentum().GetValue();
   double momentum_error = track->GetInitialAbsoluteMomentum().GetError();
@@ -228,6 +215,97 @@ void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMS
 
   // Push back output NTBMSummary object
   
+}
+
+/**
+ * Get boolean if the value is in range [min, max]
+ * @param pos position to be evaluated
+ * @param min minimum value of the range
+ * @param max maximum value of the range
+ */
+bool IsInRange(double pos, double min, double max) {
+  if (min <= pos && pos <= max) return true;
+  else return false;
+}
+
+/**
+ * Get boolean if range [min, max] makes hit in a scintillator bar
+ * @param min minimum value of the range
+ * @param max maximum value of the range
+ * @param view pln slot detector ids of the scintillator bar
+ */
+bool IsMakeHit(double min, double max, int view, int plane, int slot) {
+  TVector3 position;
+  B2Dimension::GetPosNinjaTracker((B2View)view, plane, slot, position);
+  double position_xy;
+  switch (view) {
+  case B2View::kTopView : 
+    position_xy = position.X();
+    break;
+  case B2View::kSideView :
+    position_xy = position.Y();
+    break;
+  case B2View::kUnknownView :
+    BOOST_LOG_TRIVIAL(error) << "Unknown view";
+    std::exit(1);
+  }
+
+  return IsInRange(min, position_xy - NINJA_TRACKER_SCI_WIDTH / 2. - NINJA_TRACKER_GAP,
+		   position_xy + NINJA_TRACKER_SCI_WIDTH / 2.)
+    && IsInRange(max, position_xy - NINJA_TRACKER_SCI_WIDTH / 2.,
+		 position_xy + NINJA_TRACKER_SCI_WIDTH / 2. + NINJA_TRACKER_GAP);
+}
+
+/**
+ * Get boolean if range [min, max] does not make hit in a scintillator bar
+ * @param min minimum value of the range
+ * @param max maximum value of the range
+ * @param view pln slot detector ids of the scintillator bar
+ */
+bool IsInGap(double min, double max, int view, int plane, int slot) {
+  TVector3 position;
+  B2Dimension::GetPosNinjaTracker((B2View)view, plane, slot, position);
+  double position_xy;
+  switch (view) {
+  case B2View::kTopView : 
+    position_xy = position.X();
+    break;
+  case B2View::kSideView :
+    position_xy = position.Y();
+    break;
+  case B2View::kUnknownView :
+    BOOST_LOG_TRIVIAL(error) << "Unknown view";
+    std::exit(1);
+  }
+  return position_xy + NINJA_TRACKER_SCI_WIDTH / 2. <= min
+    && max <= position_xy - NINJA_TRACKER_SCI_WIDTH / 2.;
+}
+
+
+/**
+ * Get the minimum value of the position where the line intercepts
+ * @param pos track start position
+ * @param tangent track tangent
+ * @param iplane plane id of the track starting scintillator bar
+ * @param jplane plane id of the intercept evaluated scintillator bar
+ * @param vertex vertex position of the track starting point
+ */
+double GetTrackAreaMin(double pos, double tangent, int iplane, int jplane, int vertex) {
+  if (tangent > 0) return pos + tangent * (0.);
+  else return pos + tangent * (0.);
+}
+
+/**
+ * Get the maximum value of the position where the line intercepts
+ * @param pos track start position
+ * @param tangent track tangent
+ * @param iplane plane id of the track starting scintillator bar
+ * @param jplane plane id of the intercept evaluated scintillator bar
+ * @param vertex vertex position of the track starting point
+ */
+double GetTrackAreaMax(double pos, double tangent, int iplane, int jplane, int vertex) {
+  if (tangent > 0) return pos + tangent * (0.);
+  else return pos + tangent * (0.);
 }
 
 /**
@@ -255,28 +333,52 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 	    
 	    TVector3 start_of_track;
 	    B2Dimension::GetPosNinjaTracker((B2View)iview, iplane, islot, start_of_track);
+	    double start_of_track_xy;
 	    switch(iview) {
 	    case 0 :
-	      start_of_track.SetX(start_of_track.X()
-				  + NINJA_TRACKER_SCI_WIDTH / 2. * (-1 + 2 * (ivertex/2) ));
+	      start_of_track_xy = start_of_track.X()
+		+ NINJA_TRACKER_SCI_WIDTH / 2. * ( -1 + 2 * (ivertex/2) );
 	      break;
 	    case 1 :
-	      start_of_track.SetY(start_of_track.Y()
-				  + NINJA_TRACKER_SCI_WIDTH / 2. * (-1 + 2 * (ivertex/2) ));
+	      start_of_track_xy = start_of_track.Y()
+		+ NINJA_TRACKER_SCI_WIDTH / 2. * ( -1 + 2 * (ivertex/2) );
 	      break;
 	    }
-	    bool plane_condition = {false};
+	    bool plane_condition[NINJA_TRACKER_NUM_PLANES] = {false};
 
 	    // Check the line can make a hit pattern
 	    for (int jplane = 0; jplane < NINJA_TRACKER_NUM_PLANES; jplane++) {
 
-	    }
-	  }
-	}
-      }
-    }
+	      double track_area_min = GetTrackAreaMin(start_of_track_xy, tangent.at(iview),
+						      iplane, jplane, ivertex);
+	      double track_area_max = GetTrackAreaMax(start_of_track_xy, tangent.at(iview),
+						      iplane, jplane, ivertex);
+	    
+	      if (ntbmsummary->GetNumberOfHits(icluster, iview) > 0) {
+		for (int ihit = 0; ihit < ntbmsummary->GetNumberOfHits(icluster, iview); ihit++) {
+		  if (ntbmsummary->GetPlane(icluster, iview, ihit) == jplane) {
+		    plane_condition[jplane] = IsMakeHit(track_area_min, track_area_max,
+							iview, jplane, ntbmsummary->GetSlot(icluster, iview, ihit));
+		    break;
+		  }
+		} // ihit
+	      } else {
+		for (int jslot = 0; jslot < NINJA_TRACLER_NUM_CHANNELS_ONE_PLANE; jslot++) {
+		  plane_condition[jplane] = plane_condition[jplane] || IsInGap(track_area_min, track_area_max,
+									       iview, jplane, jslot);
+		}
+	      } // fi
+	    } // jplane
+
+	    if (IsGoodTrack(plane_condition))
+	      position_list.at(iview).push_back(start_of_track_xy + tangent.at(iview) * (0.));
+
+	  } // ivertex
+	} // islot
+      } // iplane
+    } // iview
     ntbmsummary->SetNinjaPosition(icluster, position);
-  }
+  } // icluster
   
 }
 
