@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
     output_nt_tree->Branch("PLN", pln, Form("PLN[%d]/I", NUM_SLOTS));
     output_nt_tree->Branch("CH", ch, Form("CH[%d]/I", NUM_SLOTS));
 
-    int start_time, end_time;
+    int start_time = 0, end_time = 0;
     int reader_entry = 0;
     while(reader.ReadNextSpill() > 0) {
       reader_entry++;
@@ -77,6 +77,11 @@ int main(int argc, char *argv[]) {
 
     BOOST_LOG_TRIVIAL(debug) << "Start Unixtime : " << start_time;
     BOOST_LOG_TRIVIAL(debug) << "End Unixtime : " << end_time;
+
+    if (start_time == 0 || end_time == 0) {
+      BOOST_LOG_TRIVIAL(info) << "Start (End) Unixtime not set";
+      std::exit(1);
+    }
 
     BOOST_LOG_TRIVIAL(info) << "-----NINJA tracker data extraction start-----";
     
