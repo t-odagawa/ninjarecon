@@ -172,23 +172,13 @@ TVector3 CalculateTrackInitialPosition(const B2TrackSummary *track) {
  */
 bool NinjaHitExpected(const B2TrackSummary *track) {
   switch(track->GetType()) {
-  case kBabyMind3DTrack :
-    // only if extrapolated position is inside NINJA tracker
-    /*if() return true;
-    else return false;
-    break;*/
-  case kPrimaryTrack :
-    // only if extrapolated position is inside NINJA tracker
-    // and not downstream WAGASCI interaction
-    /*if() return true;
-    else return false;
-    break;*/
   default :
     BOOST_LOG_TRIVIAL(debug) << "Reconstructed Track Summary is not in NINJA interest";
   }
 
   return true; // TODO
 }
+
 /**
  * Track matching between Baby MIND and NINJA tracker using x/y separated NTBMSummary
  * and Baby MIND B2TrackSummary
@@ -335,25 +325,44 @@ bool IsGoodTrack(bool *condition) {
 }
 
 /**
- * Use Baby MIND information, reconstruct position (and angle) for matching
+ * Use Baby MIND information, reconstruct tangent for matching
+ * between NINJA tracker and Emulsion shifter
+ * @param ntbmsummary NTBMSummary object after the MatchBabyMindTrack function
+ */
+void ReconstructNinjaTangent(NTBMSummary* ntbmsummary) {
+
+  for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaClusters(); icluster++) {
+
+    std::vector<double> tangent(2);
+    int trackid = ntbmsummary->GetBabyMindTrackId(icluster);
+    std::vector<double> baby_mind_position = ntbmsummary->GetBabyMindPosition(icluster, trackid);
+    std::vector<double> ninja_position_tmp = ntbmsummary->GetNinjaPosition(icluster);
+    for (int iview = 0; iview < 2; iview++) {
+      tangent.at(iview) = (baby_mind_position.at(iview) - ninja_position_tmp.at(iview))
+	/ TRACKER_BABYMIND_DISTANCE[iview];
+    }
+    ntbmsummary->SetNinjaTangent(icluster, tangent);
+  }
+
+}
+
+/**
+ * Use Baby MIND information, reconstruct position for matching
  * between NINJA tracker and Emulsion shifter
  * @param ntbmsummary NTBMSummary object after the MatchBabyMindTrack function
  */
 void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 
   for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaClusters(); icluster++) {
-    // Angle Reconstruction
-    std::vector<double> tangent(2);
-    tangent.at(0) = 0;
-    tangent.at(1) = 0;
-    ntbmsummary->SetNinjaTangent(icluster, tangent);
 
-    // Position Reconstruction using reconstructed angle
+    std::vector<double> tangent = ntbmsummary->GetNinjaTangent(icluster);
+    // coordinate direction is fliped in reconstruction X coordinate
+    tangent.at(B2View::kTopView) = -tangent.at(B2View::kTopView);
+
     std::vector<double> position(2);
-
     std::vector<std::vector<double>> position_list = {}; // vector where good position candidates are filled
 
-    for(int iview = 0; iview < 2; iview++) {
+    for (int iview = 0; iview < 2; iview++) {
       for (int iplane = 0; iplane < NINJA_TRACKER_NUM_PLANES; iplane++) {
 	for (int islot = 0; islot < NINJA_TRACKER_NUM_CHANNELS_ONE_PLANE; islot++) {
 	  for (int ivertex = 0; ivertex < 4; ivertex++) { // Number of vertices in one scintillator bar
@@ -430,6 +439,10 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
       } // fi
     } // iview
     
+    position.at(B2View::kSideView) -= NINJA_SCI_DIFF;
+    position.at(B2View::kTopView) = -position.at(B2View::kTopView);
+    position.at(B2View::kTopView) += NINJA_SCI_DIFF;
+
     ntbmsummary->SetNinjaPosition(icluster, position);
   } // icluster
   
@@ -475,7 +488,7 @@ int main(int argc, char *argv[]) {
       if (ninja_hits.size() > 0) {
 	auto i = input_spill_summary.BeginTrueEvent();
 	auto *event = i.Next();
-	BOOST_LOG_TRIVIAL(debug) << event->GetEventId();
+	BOOST_LOG_TRIVIAL(debug) << "True event ID : " << event->GetEventId();
 	CreateNinjaCluster(ninja_hits, ntbm_tmp);
       }
 
@@ -494,7 +507,13 @@ int main(int argc, char *argv[]) {
       my_ntbm->SetNumberOfTracks(number_of_tracks);
       
       // Update NINJA hit summary information
-      ReconstructNinjaPosition(my_ntbm);
+      std::vector<double> tangent(2);
+      tangent.at(0) = 0.; tangent.at(1) = 0.;
+      for (int icluster = 0; icluster < my_ntbm->GetNumberOfNinjaClusters(); icluster++)
+	my_ntbm->SetNinjaTangent(icluster, tangent);
+      ReconstructNinjaPosition(my_ntbm); // use straight penetrate assumption
+      ReconstructNinjaTangent(my_ntbm); // reconstruct tangent
+      ReconstructNinjaPosition(my_ntbm); // use reconstructed tangent info
       
       // Create output file
       ntbm_tree->Fill();
