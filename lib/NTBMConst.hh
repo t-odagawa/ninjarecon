@@ -30,7 +30,7 @@ static const double NINJA_TRACKER_OFFSET_Z[NUMBER_OF_PLANES] = {0., 6., 9., 15.}
 ///> Difference of NINJA tracker absolute position and reconstruction coordinate
 static const double NINJA_SCI_DIFF = 448.;
 ///> Distance between NINJA tracker and Baby MIND layer in interest
-static const double NINJA_BABYMIND_DISTANCE[iview] = {810., 1040.};
+static const double NINJA_BABYMIND_DISTANCE[NUMBER_OF_VIEWS] = {810., 1040.};
 
 ///> Photoelectron threshold for the NINJA tracker
 static const double PE_THRESHOLD = 2.5;

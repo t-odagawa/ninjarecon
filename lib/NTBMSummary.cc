@@ -694,50 +694,104 @@ double NTBMSummary::GetNinjaTangentError(int cluster, int view) const {
   return GetNinjaTangentError(cluster).at(view);
 }
 
-void NTBMSummary::SetTruePosition(int cluster, int view, double true_position) {
+void NTBMSummary::SetNumberOfTrueParticles(int cluster, int number_of_true_particles) {
+  number_of_true_particles_.at(cluster) = number_of_true_particles;
+  for (int itrue = 0; itrue < number_of_true_particles_.at(cluster); itrue++) {
+    true_particle_id_.at(cluster).resize(number_of_true_particles_.at(cluster));
+    true_position_.at(cluster).resize(number_of_true_particles_.at(cluster));
+    true_tangent_.at(cluster).resize(number_of_true_particles_.at(cluster));
+  }
+}
+
+int NTBMSummary::GetNumberOfTrueParticles(int cluster) const {
+  if (cluster >= number_of_ninja_clusters_)
+    throw std::out_of_range("Number of cluster out of range");
+  return number_of_true_particles_.at(cluster);
+}
+
+void NTBMSummary::SetTrueParticleId(int cluster, int particle, int true_particle_id) {
+  true_particle_id_.at(cluster).at(particle) = true_particle_id;
+}
+
+void NTBMSummary::SetTrueParticleId(int cluster, std::vector<int> true_particle_id) {
+  for (int particle = 0; particle < number_of_true_particles_.at(cluster); particle++)
+    SetTrueParticleId(cluster, particle, true_particle_id.at(particle));
+}
+
+std::vector<int> NTBMSummary::GetTrueParticleId(int cluster) const {
+  return true_particle_id_.at(cluster);
+}
+
+int NTBMSummary::GetTrueParticleId(int cluster, int particle) const {
+  return GetTrueParticleId(cluster).at(particle);
+}
+
+void NTBMSummary::SetTruePosition(int cluster, int particle, int view, double true_position) {
   if (view >= NUMBER_OF_VIEWS)
     throw std::out_of_range("View out of range");
-  true_position_.at(cluster).at(view) = true_position;
+  true_position_.at(cluster).at(particle).at(view) = true_position;
 }
 
-void NTBMSummary::SetTruePosition(int cluster, std::vector<double> true_position) {
+void NTBMSummary::SetTruePosition(int cluster, int particle, std::vector<double> true_position) {
   for(std::size_t view = 0; view < NUMBER_OF_VIEWS; view++)
-    SetTruePosition(cluster, view, true_position.at(view));
+    SetTruePosition(cluster, particle, view, true_position.at(view));
 }
 
-std::vector<double> NTBMSummary::GetTruePosition(int cluster) const {
+void NTBMSummary::SetTruePosition(int cluster, std::vector<std::vector<double>> true_position) {
+  for(int particle = 0; particle < number_of_true_particles_.at(cluster); particle++)
+    SetTruePosition(cluster, particle, true_position.at(particle));
+}
+
+std::vector<std::vector<double>> NTBMSummary::GetTruePosition(int cluster) const {
   if (cluster >= number_of_ninja_clusters_)
     throw std::out_of_range("Number of cluster out of range");
   return true_position_.at(cluster);
 }
 
-double NTBMSummary::GetTruePosition(int cluster, int view) const {
+std::vector<double> NTBMSummary::GetTruePosition(int cluster, int particle) const {
+  if (particle >= number_of_true_particles_.at(cluster))
+    throw std::out_of_range("Number of true particles our of range");
+  return GetTruePosition(cluster).at(particle);
+}
+
+double NTBMSummary::GetTruePosition(int cluster, int particle, int view) const {
   if (view >= NUMBER_OF_VIEWS)
     throw std::out_of_range("View out of range");
-  return GetTruePosition(cluster).at(view);
+  return GetTruePosition(cluster, particle).at(view);
 }
 
-void NTBMSummary::SetTrueTangent(int cluster, int view, double true_tangent) {
+void NTBMSummary::SetTrueTangent(int cluster, int particle, int view, double true_tangent) {
   if (view >= NUMBER_OF_VIEWS)
-    throw std::out_of_range("View out of range");
-  true_tangent_.at(cluster).at(view) = true_tangent;
+    throw std::out_of_range("View ourt of range");
+  true_tangent_.at(cluster).at(particle).at(view) = true_tangent;
 }
 
-void NTBMSummary::SetTrueTangent(int cluster, std::vector<double> true_tangent) {
-  for(std::size_t view = 0; view < NUMBER_OF_VIEWS; view++)
-    SetTrueTangent(cluster, view, true_tangent.at(view));
+void NTBMSummary::SetTrueTangent(int cluster, int particle, std::vector<double> true_tangent) {
+  for (std::size_t view = 0; view < NUMBER_OF_VIEWS; view++)
+    SetTrueTangent(cluster, particle, view, true_tangent.at(view));
 }
 
-std::vector<double> NTBMSummary::GetTrueTangent(int cluster) const {
+void NTBMSummary::SetTrueTangent(int cluster, std::vector<std::vector<double>> true_tangent) {
+  for (int particle = 0; particle < number_of_true_particles_.at(cluster); particle++)
+    SetTrueTangent(cluster, particle, true_tangent.at(particle));
+}
+
+std::vector<std::vector<double>> NTBMSummary::GetTrueTangent(int cluster) const {
   if (cluster >= number_of_ninja_clusters_)
     throw std::out_of_range("Number of cluster out of range");
   return true_tangent_.at(cluster);
 }
 
-double NTBMSummary::GetTrueTangent(int cluster, int view) const {
+std::vector<double> NTBMSummary::GetTrueTangent(int cluster, int particle) const {
+  if (particle >= number_of_true_particles_.at(cluster))
+    throw std::out_of_range("Number of true particles out of range");
+  return GetTrueTangent(cluster).at(particle);
+}
+
+double NTBMSummary::GetTrueTangent(int cluster, int particle, int view) const {
   if (view >= NUMBER_OF_VIEWS)
     throw std::out_of_range("View out of range");
-  return GetTrueTangent(cluster).at(view);
+  return GetTrueTangent(cluster, particle).at(view);
 }
 
 ClassImp(NTBMSummary)

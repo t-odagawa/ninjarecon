@@ -220,43 +220,64 @@ public :
 
   double GetNinjaTangentError(int cluster, int view) const;
 
-  void SetTruePosition(int cluster, int view, double true_position);
+  void SetNumberOfTrueParticles(int cluster, int number_of_true_particles);
 
-  void SetTruePosition(int cluster, std::vector<double> true_position);
+  int GetNumberOfTrueParticles(int cluster) const;
 
-  std::vector<double> GetTruePosition(int cluster) const;
+  void SetTrueParticleId(int cluster, int particle, int true_particle_id);
 
-  double GetTruePosition(int cluster, int view) const;
+  void SetTrueParticleId(int cluster, std::vector<int> true_particle_id);
 
-  void SetTrueTangent(int cluster, int view, double true_tangent);
+  std::vector<int> GetTrueParticleId(int cluster) const;
 
-  void SetTrueTangent(int cluster, std::vector<double> true_tangent);
+  int GetTrueParticleId(int cluster, int particle) const;
 
-  std::vector<double> GetTrueTangent(int cluster) const;
+  void SetTruePosition(int cluster, int particle, int view, double true_position);
 
-  double GetTrueTangent(int cluster, int view) const;
+  void SetTruePosition(int cluster, int particle, std::vector<double> true_position);
+
+  void SetTruePosition(int cluster, std::vector<std::vector<double>> true_position);
+
+  std::vector<std::vector<double>> GetTruePosition(int cluster) const;
+
+  std::vector<double> GetTruePosition(int cluster, int particle) const;
+
+  double GetTruePosition(int cluster, int particle, int view) const;
+
+  void SetTrueTangent(int clcuster, int particle, int view, double true_tangent);
+
+  void SetTrueTangent(int cluster, int particle, std::vector<double> true_tangent);
+
+  void SetTrueTangent(int cluster, std::vector<std::vector<double>> true_tangent);
+
+  std::vector<std::vector<double>> GetTrueTangent(int cluster) const;
+
+  std::vector<double> GetTrueTangent(int cluster, int particle) const;
+
+  double GetTrueTangent(int cluster, int particle, int view) const;
 
 private :
 
   ///> Beam information extracted from B2BeamSummary
-  ///> total POT of the spill
+  ///> Total POT of the spill
   double spill_pot_;
   ///> POT for each bunch
   double bunch_pot_[NUMBER_OF_BUNCHES];
   ///> BSD spill number
   int bsd_spill_number_;
-  ///> spill time stamp
+  ///> Spill time stamp
   double timestamp_;
   ///> BSD spill flag
   int bsd_good_spill_flag_;
   ///> WAGASCI spill flag
   int wagasci_good_spill_flag_;
   ///> Baby MIND information extracted from B2TrackSummary and B2ClusterSummary
-  ///> number of tracks;
+  ///> track -> view(2)
+  ///> Number of Baby MIND reconstructed tracks;
   int number_of_tracks_;
-  ///> track type (0:ECC interaction cand, 1:sand muon, -1:other)
+  ///> Track type (0:ECC interaction cand, 1:sand muon, -1:other)
   std::vector<int> track_type_;
-  ///> momentum measurement type (0:range, 1:curvature)
+  ///> Momentum measurement type (0:range, 1:curvature)
   std::vector<int> momentum_type_;
   ///> Baby MIND reconstructed momentum
   std::vector<double> momentum_;
@@ -277,6 +298,7 @@ private :
   ///> Bunch number where the track detected
   std::vector<int> bunch_;
   ///> NINJA tracker information for muon track matching
+  ///> cluster -> view(2) -> hit
   ///> Number of NINJA tracker 3d clusters
   int number_of_ninja_clusters_;
   ///> Corresponding Baby MIND track id
@@ -299,12 +321,18 @@ private :
   std::vector<std::vector<double>> ninja_tangent_;
   ///> Reconstructed tangent error for track matching
   std::vector<std::vector<double>> ninja_tangent_error_;
+  ///> True particle information for MC
+  ///> cluster -> true particle -> view(2)
+  ///> Number of true particles making one cluster
+  std::vector<int> number_of_true_particles_;
+  ///> PDG particle id of true particles
+  std::vector<std::vector<int>> true_particle_id_;
   ///> True position
-  std::vector<std::vector<double>> true_position_;
+  std::vector<std::vector<std::vector<double>>> true_position_;
   ///> True tangent
-  std::vector<std::vector<double>> true_tangent_;
+  std::vector<std::vector<std::vector<double>>> true_tangent_;
 
-  ClassDefOverride(NTBMSummary, 4) // NT BM Summary
+  ClassDefOverride(NTBMSummary, 6) // NT BM Summary
 };
 
 #endif
