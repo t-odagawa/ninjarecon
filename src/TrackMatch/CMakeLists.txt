@@ -1,7 +1,8 @@
 message (STATUS "TrackMatch...")
 
 add_executable(TrackMatch
-	TrackMatch.cpp)
+	TrackMatch.cpp
+	TrackMatch.hpp)
 
 target_link_libraries(TrackMatch
 	${ROOT_LIBRARIES}

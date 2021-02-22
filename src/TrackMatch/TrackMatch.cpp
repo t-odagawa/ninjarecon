@@ -22,14 +22,10 @@
 #include "B2Pdg.hh"
 #include "NTBMSummary.hh"
 
+#include "TrackMatch.hpp"
 
 namespace logging = boost::log;
 
-/**
- * Get scintillator center position of B2HitSummary in NINJA tracker coordinate
- * @param ninja_hit B2HitSummary object
- * @return scintillator position in NINJA tracker coordinate
- */
 double GetScintillatorPosition(const B2HitSummary* ninja_hit) {
   TVector3 position;
   B2Dimension::GetPosNinjaTracker(ninja_hit->GetView(), ninja_hit->GetPlane(),
@@ -46,22 +42,11 @@ double GetScintillatorPosition(const B2HitSummary* ninja_hit) {
   }
 }
 
-/**
- * Comparator for B2HitSummary vector sort
- * @param lhs left hand side object
- * @param rhs right hand side object
- * @return true if the objects should not be swapped
- */
 bool CompareNinjaHits(const B2HitSummary* lhs, const B2HitSummary* rhs) {
   if (lhs->GetView()!=rhs->GetView()) return lhs->GetView() < rhs->GetView();
   return GetScintillatorPosition(lhs) < GetScintillatorPosition(rhs);
 }
 
-/**
- * Create NINJA tracker clusters
- * @param ninja_hits NINJA Hit summary vector
- * @param ninja_clusters NTBMSummary for the spill (x/y separated and only NINJA tracker data)
- */
 void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
 			NTBMSummary* ninja_clusters) {
   std::sort(ninja_hits.begin(), ninja_hits.end(), CompareNinjaHits);
@@ -116,13 +101,6 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
   BOOST_LOG_TRIVIAL(debug) << "NINJA tracker clusters created";
 }
 
-/**
- * Original function instead of B2HitsSet::HasDetector() as reconstructed track summary
- * does not have detector information on its own
- * @param track reconstructed B2TrackSummary object
- * @param det detector id
- * @return true if the object has hits inside the detector
- */
 bool MyHasDetector(const B2TrackSummary *track, B2Detector det) {
 
   bool ret = false;
@@ -137,12 +115,6 @@ bool MyHasDetector(const B2TrackSummary *track, B2Detector det) {
   return ret;
 }
 
-/**
- * Get incidenct track position on the upstream surface of Baby MIND
- * calculation is changed depending on the track type
- * @param track B2TrackSummary object
- * @return track position on the upstream surface of Baby MIND
- */
 TVector3 CalculateTrackInitialPosition(const B2TrackSummary *track) {
 
   TVector3 track_initial_position = {};
@@ -168,17 +140,35 @@ TVector3 CalculateTrackInitialPosition(const B2TrackSummary *track) {
 }
 
 /**
- * Check if the reconstructed track summary expected to have hits
- * in the NINJA tracker
- * @param track B2TrackSummary object of Reconstructed Baby MIND track
- * @return true if the track expected to have hits else false
- */
+*/
+std::vector<double> GetBabyMindPosition(const B2TrackSummary *track) {
+
+  std::vector<double> babymind_position(2);
+
+  auto it_cluster = track->BeginCluster();
+  while (const auto *cluster = it_cluster.Next()) {
+    auto it_hit = cluster->BeginHit();
+    while (const auto *hit = it_hit.Next()) {
+      if (hit->GetDetectorId() == B2Detector::kBabyMind) {
+	if (hit->GetView() == B2View::kSideView
+	    && hit->GetPlane() == 0)
+	  babymind_position.at(0) = hit->GetAbsolutePosition().GetValue().Y();
+	else if (hit->GetView() == B2View::kTopView
+		 && hit->GetPlane() == 1)
+	  babymind_position.at(1) = hit->GetAbsolutePosition().GetValue().X();
+      }
+    }
+  }
+
+  return babymind_position;
+}
+
 bool NinjaHitExpected(const B2TrackSummary *track) {
   switch(track->GetType()) {
-  case B2TrackType::kPrimaryTrack :
+  case B2TrackedParticle::kPrimaryTrack :
 
     break;
-  case B2TrackType::kBabyMind3DTrack :
+  case B2TrackedParticle::kBabyMind3DTrack :
 
     break;
   default :
@@ -188,13 +178,6 @@ bool NinjaHitExpected(const B2TrackSummary *track) {
   return true; // TODO
 }
 
-/**
- * Track matching between Baby MIND and NINJA tracker using x/y separated NTBMSummary
- * and Baby MIND B2TrackSummary
- * @param track B2TrackSummary object of Baby MIND track
- * @param ntbm_in NTBMSummary object created in the CreateNinjaCluster function
- * @param ntbm_out NTBMSummary object for 3D track matching
- */
 void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMSummary* ntbm_out) {
 
   int momentum_type = 0;
@@ -219,23 +202,11 @@ void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMS
   
 }
 
-/**
- * Get boolean if the value is in range [min, max]
- * @param pos position to be evaluated
- * @param min minimum value of the range
- * @param max maximum value of the range
- */
 bool IsInRange(double pos, double min, double max) {
   if (min <= pos && pos <= max) return true;
   else return false;
 }
 
-/**
- * Get boolean if range [min, max] makes hit in a scintillator bar
- * @param min minimum value of the range
- * @param max maximum value of the range
- * @param view pln slot detector ids of the scintillator bar
- */
 bool IsMakeHit(double min, double max, int view, int plane, int slot) {
   TVector3 position;
   B2Dimension::GetPosNinjaTracker((B2View)view, plane, slot, position);
@@ -258,12 +229,6 @@ bool IsMakeHit(double min, double max, int view, int plane, int slot) {
 		 position_xy + NINJA_TRACKER_SCI_WIDTH / 2. + NINJA_TRACKER_GAP);
 }
 
-/**
- * Get boolean if range [min, max] does not make hit in a scintillator bar
- * @param min minimum value of the range
- * @param max maximum value of the range
- * @param view pln slot detector ids of the scintillator bar
- */
 bool IsInGap(double min, double max, int view, int plane, int slot) {
   TVector3 position;
   B2Dimension::GetPosNinjaTracker((B2View)view, plane, slot, position);
@@ -291,15 +256,6 @@ bool IsInGap(double min, double max, int view, int plane, int slot) {
   }
 }
 
-
-/**
- * Get the minimum value of the position where the line intercepts
- * @param pos track start position
- * @param tangent track tangent
- * @param iplane plane id of the track starting scintillator bar
- * @param jplane plane id of the intercept evaluated scintillator bar
- * @param vertex vertex position of the track starting point
- */
 double GetTrackAreaMin(double pos, double tangent, int iplane, int jplane, int vertex) {
   if (tangent > 0) return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
 					   + NINJA_TRACKER_SCI_THICK * (0 - vertex % 2));
@@ -307,14 +263,6 @@ double GetTrackAreaMin(double pos, double tangent, int iplane, int jplane, int v
 			       + NINJA_TRACKER_SCI_THICK * (1 - vertex % 2));
 }
 
-/**
- * Get the maximum value of the position where the line intercepts
- * @param pos track start position
- * @param tangent track tangent
- * @param iplane plane id of the track starting scintillator bar
- * @param jplane plane id of the intercept evaluated scintillator bar
- * @param vertex vertex position of the track starting point
- */
 double GetTrackAreaMax(double pos, double tangent, int iplane, int jplane, int vertex) {
   if (tangent > 0) return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
 					   + NINJA_TRACKER_SCI_THICK * (1 - vertex % 2));
@@ -322,10 +270,6 @@ double GetTrackAreaMax(double pos, double tangent, int iplane, int jplane, int v
 			       + NINJA_TRACKER_SCI_THICK * (0 - vertex % 2));
 }
 
-/**
- * Get boolean if the normal track analysis is possible
- * @param condition four element array of boolean
- */
 bool IsGoodTrack(bool *condition) {
   bool ret = true;
   for (int iplane = 0; iplane < NINJA_TRACKER_NUM_PLANES; iplane++)
@@ -333,11 +277,6 @@ bool IsGoodTrack(bool *condition) {
   return ret;
 }
 
-/**
- * Use Baby MIND information, reconstruct tangent for matching
- * between NINJA tracker and Emulsion shifter
- * @param ntbmsummary NTBMSummary object after the MatchBabyMindTrack function
- */
 void ReconstructNinjaTangent(NTBMSummary* ntbmsummary) {
 
   for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaClusters(); icluster++) {
@@ -355,11 +294,6 @@ void ReconstructNinjaTangent(NTBMSummary* ntbmsummary) {
 
 }
 
-/**
- * Use Baby MIND information, reconstruct position for matching
- * between NINJA tracker and Emulsion shifter
- * @param ntbmsummary NTBMSummary object after the MatchBabyMindTrack function
- */
 void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 
   for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaClusters(); icluster++) {
