@@ -18,7 +18,10 @@
 #include "B2ClusterSummary.hh"
 #include "B2TrackSummary.hh"
 #include "B2EventSummary.hh"
+#include "B2EmulsionSummary.hh"
+#include "B2Pdg.hh"
 #include "NTBMSummary.hh"
+
 
 namespace logging = boost::log;
 
@@ -172,6 +175,12 @@ TVector3 CalculateTrackInitialPosition(const B2TrackSummary *track) {
  */
 bool NinjaHitExpected(const B2TrackSummary *track) {
   switch(track->GetType()) {
+  case B2TrackType::kPrimaryTrack :
+
+    break;
+  case B2TrackType::kBabyMind3DTrack :
+
+    break;
   default :
     BOOST_LOG_TRIVIAL(debug) << "Reconstructed Track Summary is not in NINJA interest";
   }
@@ -335,11 +344,11 @@ void ReconstructNinjaTangent(NTBMSummary* ntbmsummary) {
 
     std::vector<double> tangent(2);
     int trackid = ntbmsummary->GetBabyMindTrackId(icluster);
-    std::vector<double> baby_mind_position = ntbmsummary->GetBabyMindPosition(icluster, trackid);
+    std::vector<double> baby_mind_position = ntbmsummary->GetBabyMindPosition(trackid);
     std::vector<double> ninja_position_tmp = ntbmsummary->GetNinjaPosition(icluster);
     for (int iview = 0; iview < 2; iview++) {
       tangent.at(iview) = (baby_mind_position.at(iview) - ninja_position_tmp.at(iview))
-	/ TRACKER_BABYMIND_DISTANCE[iview];
+	/ NINJA_BABYMIND_DISTANCE[iview];
     }
     ntbmsummary->SetNinjaTangent(icluster, tangent);
   }
@@ -354,7 +363,7 @@ void ReconstructNinjaTangent(NTBMSummary* ntbmsummary) {
 void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 
   for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaClusters(); icluster++) {
-
+ 
     std::vector<double> tangent = ntbmsummary->GetNinjaTangent(icluster);
     // coordinate direction is fliped in reconstruction X coordinate
     tangent.at(B2View::kTopView) = -tangent.at(B2View::kTopView);
@@ -448,6 +457,26 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
   
 }
 
+void SetTruePositionAngle(B2SpillSummary* spill_summary, NTBMSummary* ntbmsummary) {
+
+  auto it_emulsion = spill_summary->BeginEmulsion();
+  while (const auto *emulsion = it_emulsion.Next()) {
+    // Get position of TSS downstream film position
+    if (emulsion->GetFilmType() == B2EmulsionType::kShifter && emulsion->GetPlate() == 15) {
+      int particle_id = emulsion->GetParentTrack().GetParticlePdg();
+      TVector3 true_position = emulsion->GetAbsolutePosition().GetValue();
+      if (!B2Pdg::IsMuon(particle_id)) continue;
+
+      // Get most muon-like cluster and set true info
+      for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaClusters(); icluster++) {
+	std::vector<double> ninja_position = ntbmsummary->GetNinjaPosition(icluster);
+
+      }
+
+    }
+  }
+}
+
 int main(int argc, char *argv[]) {
 
   logging::core::get()->set_filter
@@ -467,7 +496,6 @@ int main(int argc, char *argv[]) {
     B2Reader reader(argv[1]);
 
     TFile *ntbm_file = new TFile(argv[2], "recreate");
-    ntbm_file->cd();
     TTree *ntbm_tree = new TTree("tree", "NINJA BabyMIND Original Summary");
     NTBMSummary* my_ntbm = nullptr;
     ntbm_tree->Branch("NTBMSummary", &my_ntbm);
@@ -485,12 +513,8 @@ int main(int argc, char *argv[]) {
       }
 
       // Create X/Y NINJA clusters
-      if (ninja_hits.size() > 0) {
-	auto i = input_spill_summary.BeginTrueEvent();
-	auto *event = i.Next();
-	BOOST_LOG_TRIVIAL(debug) << "True event ID : " << event->GetEventId();
+      if (ninja_hits.size() > 0)
 	CreateNinjaCluster(ninja_hits, ntbm_tmp);
-      }
 
       // Extrapolate BabyMIND tracks to the NINJA position
       // and get the best cluster to match each BabyMIND track
