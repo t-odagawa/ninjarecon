@@ -115,35 +115,52 @@ bool MyHasDetector(const B2TrackSummary *track, B2Detector det) {
   return ret;
 }
 
-TVector3 CalculateTrackInitialPosition(const B2TrackSummary *track) {
+std::vector<double> GetPlatePosition(const B2TrackSummary *track, int view, int plane) {
 
-  TVector3 track_initial_position = {};
-  
-  if ( track->GetType() == kPrimaryTrack ) {
-    TVector3 track_direction = track->GetFinalDirection().GetValue();    
-    const Double_t bm_pos_z = 2.85 * m - 2. * m;
-    Double_t x = track->GetInitialPosition().GetValue().X()
-      + track_direction.X() * (bm_pos_z - track->GetInitialPosition().GetValue().Z());
-    Double_t y = track->GetInitialPosition().GetValue().Y()
-      + track_direction.Y() * (bm_pos_z - track->GetInitialPosition().GetValue().Z());
-    track_initial_position.SetX(x);
-    track_initial_position.SetY(y);
-    track_initial_position.SetZ(bm_pos_z);
-  } else if ( track->GetType() == kBabyMind3DTrack ) {
-    track_initial_position = track->GetInitialPosition().GetValue();
-  } else {
-    BOOST_LOG_TRIVIAL(error) << "Reconstructed Track Summary is not in NINJA interest";
+  std::vector<double> position(2);
+  int hits = 0;
+
+  auto it_cluster = track->BeginCluster();
+  while (const auto *cluster = it_cluster.Next()) {
+    auto it_hit = cluster->BeginHit();
+    while (const auto *hit = it_hit.Next()) {
+      if (hit->GetDetectorId() == B2Detector::kBabyMind) {
+	if (hit->GetView() == view &&
+	    hit->GetPlane() == plane) {
+	  TVector3 babymind_position;
+	  B2Dimension::GetBabyMindPosition(track, (B2View)view, plane, hit->GetSlot(),
+					   babymind_position);
+	  if (view == B2View::kTopView)
+	    position.at(0) += babymind_position.GetValue().X();
+	  else if (view == B2View::kSideView)
+	    position.at(0) += babymind_position.GetValue().Y();
+	  position.at(1) += babymind_position.GetValue().Z();
+	  hits++
+	}
+
+      }
+    }
+    position.at(0) /= (double) hits; 
+    position.at(1) /= (double) hits;
   }
 
-  return track_initial_position;
-  
+  return position;
+
 }
 
-/**
-*/
-std::vector<double> GetBabyMindPosition(const B2TrackSummary *track) {
+std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track) {
 
-  std::vector<double> babymind_position(2);
+  std::vector<double> babymind_initial_direction(2);
+
+
+}
+
+std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track) {
+
+  std::vector<double> babymind_initial_position(2);
+  babymind_initial_position.at(0) = 0.; babymind_initial_position.at(1) = 0.;
+  std::vector<int> babymind_hits(2);
+  babymind_hits.at(0) = 0; babymind_hits.at(1) = 0;
 
   auto it_cluster = track->BeginCluster();
   while (const auto *cluster = it_cluster.Next()) {
@@ -151,54 +168,36 @@ std::vector<double> GetBabyMindPosition(const B2TrackSummary *track) {
     while (const auto *hit = it_hit.Next()) {
       if (hit->GetDetectorId() == B2Detector::kBabyMind) {
 	if (hit->GetView() == B2View::kSideView
-	    && hit->GetPlane() == 0)
-	  babymind_position.at(0) = hit->GetAbsolutePosition().GetValue().Y();
-	else if (hit->GetView() == B2View::kTopView
-		 && hit->GetPlane() == 1)
-	  babymind_position.at(1) = hit->GetAbsolutePosition().GetValue().X();
+	    && hit->GetPlane() == 0) {
+	  babymind_initial_position.at(0) += hit->GetAbsolutePosition().GetValue().Y();
+	  babymind_hits.at(0)++;
+	}
+	else if (hit->GetView() == B2View::kTopView 
+		 && hit->GetPlane() == 1) {
+	  babymind_initial_position.at(1) += hit->GetAbsolutePosition().GetValue().X();
+	  babymind_hits.at(1)++;
+	}
       }
     }
   }
 
-  return babymind_position;
+  babymind_initial_position.at(0) /= (double) babymind_hits.at(0);
+  babymind_initial_position.at(1) /= (double) babymind_hits.at(1);
+  return babymind_initial_position;
 }
 
 bool NinjaHitExpected(const B2TrackSummary *track) {
-  switch(track->GetType()) {
-  case B2TrackedParticle::kPrimaryTrack :
 
-    break;
-  case B2TrackedParticle::kBabyMind3DTrack :
+  // Extrapolated position
 
-    break;
-  default :
-    BOOST_LOG_TRIVIAL(debug) << "Reconstructed Track Summary is not in NINJA interest";
+  if (track->GetType() == B2TrackedParticle::kPrimaryTrack) {
+    // Downstream WAGASCI interaction
+    return false;
   }
-
   return true; // TODO
 }
 
 void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMSummary* ntbm_out) {
-
-  int momentum_type = 0;
-  double momentum = track->GetInitialAbsoluteMomentum().GetValue();
-  double momentum_error = track->GetInitialAbsoluteMomentum().GetError();
-
-  TVector3 track_initial_position = CalculateTrackInitialPosition(track);
-  //TVector3 track_initial_position_error = track->GetInitialPosition().GetError(); // Baby MIND position error TODO
-  TVector3 track_initial_direction = track->GetFinalDirection().GetValue();
-  TVector3 track_initial_direction_error = track->GetFinalDirection().GetError(); // Baby MIND tangent error TODO
-
-  int charge = 1;
-  int direction = 1; // positive or negative
-  int bunch = 0;
-
-  // Get the nearest X/Y NINJA cluster respectively
-  for (int intbmcluster = 0; intbmcluster < ntbm_in->GetNumberOfNinjaClusters(); intbmcluster++) {
-
-  }
-
-  // Push back output NTBMSummary object
   
 }
 
@@ -465,11 +464,6 @@ int main(int argc, char *argv[]) {
       my_ntbm->SetNumberOfTracks(number_of_tracks);
       
       // Update NINJA hit summary information
-      std::vector<double> tangent(2);
-      tangent.at(0) = 0.; tangent.at(1) = 0.;
-      for (int icluster = 0; icluster < my_ntbm->GetNumberOfNinjaClusters(); icluster++)
-	my_ntbm->SetNinjaTangent(icluster, tangent);
-      ReconstructNinjaPosition(my_ntbm); // use straight penetrate assumption
       ReconstructNinjaTangent(my_ntbm); // reconstruct tangent
       ReconstructNinjaPosition(my_ntbm); // use reconstructed tangent info
       

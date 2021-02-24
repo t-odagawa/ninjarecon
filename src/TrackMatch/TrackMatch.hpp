@@ -47,7 +47,9 @@ bool MyHasDetector(const B2TrackSummary *track, B2Detector det);
  */
 TVector3 CalculateTrackInitialPosition(const B2TrackSummary *track);
 
-std::vector<double> GetBabyMindPosition(const B2TrackSummary *track);
+std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track);
+
+std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track);
 
 /**
  * Check if the reconstructed track summary expected to have hits
