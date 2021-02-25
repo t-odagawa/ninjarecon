@@ -3,17 +3,12 @@
 
 #include <vector>
 
+#include <TCanvas.h>
+
 #include "B2SpillSummary.hh"
 #include "B2HitSummary.hh"
 #include "B2TrackSummary.hh"
 #include "NTBMSummary.hh"
-
-/**
- * Get scintillator center position of B2HitSummary in NINJA tracker coordinate
- * @param ninja_hit B2HitSummary object
- * @return scintillator position in NINJA tracker coordinate
- */
-double GetScintillatorPosition(const B2HitSummary *ninja_hit);
 
 /**
  * Comparator for B2HitSummary vector sort
@@ -47,9 +42,25 @@ bool MyHasDetector(const B2TrackSummary *track, B2Detector det);
  */
 TVector3 CalculateTrackInitialPosition(const B2TrackSummary *track);
 
-std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track);
+int GetBabyMindPlaneHits(const B2TrackSummary *track, int view, int plane);
 
-std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track);
+/**
+ * Get the averaged x(y)/z position vector in Baby MIND
+ * @param track reconstructed B2TrackSummary object
+ * @param view view in interest
+ * @param plane plane in interest
+ * @return at(0) means x or y averaged position, at(1) does z
+ */
+
+std::vector<double> GetBabyMindPlanePosition(const B2TrackSummary *track, int view, int plane);
+
+std::vector<double> GetBabyMindPlanePositionError(const B2TrackSummary *track, int view, int plane);
+
+std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, int entry);
+
+std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, int view, TCanvas *c, int entry);
+
+std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track, int view, TCanvas *c, int entry);
 
 /**
  * Check if the reconstructed track summary expected to have hits
@@ -57,7 +68,7 @@ std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track);
  * @param track B2TrackSummary object of Reconstructed Baby MIND track
  * @return true if the track expected to have hits else false
  */
-bool NinjaHitExpected(const B2TrackSummary *track);
+bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry);
 
 /**
  * Track matching between Baby MIND and NINJA tracker using x/y separated NTBMSummary

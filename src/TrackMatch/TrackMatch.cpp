@@ -1,3 +1,5 @@
+#define CANVAS
+
 // system includes
 #include <vector>
 #include <numeric>
@@ -8,11 +10,19 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
+// root includes
+#include <TGraphErrors.h>
+#include <TF1.h>
+#include <TString.h>
+#include <TCanvas.h>
+
 // B2 includes
 #include "B2Reader.hh"
 #include "B2Writer.hh"
 #include "B2Enum.hh"
 #include "B2Dimension.hh"
+#include "B2SpillSummary.hh"
+#include "B2BeamSummary.hh"
 #include "B2HitSummary.hh"
 #include "B2VertexSummary.hh"
 #include "B2ClusterSummary.hh"
@@ -26,33 +36,26 @@
 
 namespace logging = boost::log;
 
-double GetScintillatorPosition(const B2HitSummary* ninja_hit) {
-  TVector3 position;
-  B2Dimension::GetPosNinjaTracker(ninja_hit->GetView(), ninja_hit->GetPlane(),
-				  ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()),
-				  position);
-  switch (ninja_hit->GetView()) {
-  case B2View::kTopView :
-    return position.X();
-  case B2View::kSideView :
-    return position.Y();
-  case B2View::kUnknownView :
-    BOOST_LOG_TRIVIAL(error) << "Unknown view";
-    return B2_NON_INITIALIZED_VALUE;
-  }
-}
-
 bool CompareNinjaHits(const B2HitSummary* lhs, const B2HitSummary* rhs) {
   if (lhs->GetView()!=rhs->GetView()) return lhs->GetView() < rhs->GetView();
-  return GetScintillatorPosition(lhs) < GetScintillatorPosition(rhs);
+  switch (lhs->GetView()) {
+  case B2View::kSideView :
+    return lhs->GetScintillatorPosition().GetValue().Y()
+      < rhs->GetScintillatorPosition().GetValue().Y();
+  case B2View::kTopView :
+    return lhs->GetScintillatorPosition().GetValue().X()
+      < rhs->GetScintillatorPosition().GetValue().X();
+  default :
+    throw std::invalid_argument("View not valid : " + lhs->GetView());
+  }
 }
 
 void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
 			NTBMSummary* ninja_clusters) {
   std::sort(ninja_hits.begin(), ninja_hits.end(), CompareNinjaHits);
 
-  double scintillator_position_tmp;
-  int view_tmp;
+  double scintillator_position_tmp = -9999.;
+  int view_tmp = -1;
   
   int number_of_ninja_clusters = 0;
   std::vector<int> number_of_hits_tmp(2, 0);
@@ -64,12 +67,25 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
   std::vector<std::vector<std::vector<int>>> plane = {}, slot = {};
   std::vector<std::vector<std::vector<double>>> pe = {};
 
-  for(const auto ninja_hit : ninja_hits) {
+  for (const auto ninja_hit : ninja_hits) {
+    double ninja_hit_position_tmp_ = 0.;
+    if (ninja_hit->GetView() == B2View::kSideView)
+      ninja_hit_position_tmp_ = ninja_hit->GetScintillatorPosition().GetValue().Y();
+    else if (ninja_hit->GetView() == B2View::kTopView)
+      ninja_hit_position_tmp_ = ninja_hit->GetScintillatorPosition().GetValue().X();
 
     // when scintillators have a gap, create new NINJA cluster
     if ( ( ninja_hit != ninja_hits.front() )
-	&& ( GetScintillatorPosition(ninja_hit) >  scintillator_position_tmp + NINJA_TRACKER_SCI_WIDTH
+	&& ( ninja_hit_position_tmp_ >  scintillator_position_tmp + NINJA_TRACKER_SCI_WIDTH
 	     || ninja_hit->GetView() != view_tmp || ninja_hit == ninja_hits.back()) ) {
+
+      if (ninja_hit == ninja_hits.back()) { // push back at the end of the vector
+	number_of_hits_tmp.at(ninja_hit->GetView())++;
+	plane_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetPlane());
+	slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()));
+	pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetSingleReadout()));	
+      }
+
       number_of_ninja_clusters++;
       number_of_hits.push_back(number_of_hits_tmp); number_of_hits_tmp.assign(2,0);
       plane.push_back(plane_tmp);
@@ -85,17 +101,20 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
     slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()));
     pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetSingleReadout()));
 
-    scintillator_position_tmp = GetScintillatorPosition(ninja_hit);
+    scintillator_position_tmp = ninja_hit_position_tmp_;
     view_tmp = ninja_hit->GetView();
 
   }
 
+  std::vector<double> tangent(2);
+  tangent.at(0) = 0; tangent.at(1) = 0;
   ninja_clusters->SetNumberOfNinjaClusters(number_of_ninja_clusters);
   for(int icluster = 0; icluster < number_of_ninja_clusters; icluster++) {
     ninja_clusters->SetNumberOfHits(icluster, number_of_hits.at(icluster));
     ninja_clusters->SetPlane(icluster, plane.at(icluster));
     ninja_clusters->SetSlot(icluster, slot.at(icluster));
     ninja_clusters->SetPe(icluster, pe.at(icluster));
+    ninja_clusters->SetNinjaTangent(icluster, tangent);
   }
 
   BOOST_LOG_TRIVIAL(debug) << "NINJA tracker clusters created";
@@ -115,10 +134,32 @@ bool MyHasDetector(const B2TrackSummary *track, B2Detector det) {
   return ret;
 }
 
-std::vector<double> GetPlatePosition(const B2TrackSummary *track, int view, int plane) {
+int GetBabyMindPlaneHits(const B2TrackSummary *track, int view, int plane) {
 
-  std::vector<double> position(2);
-  int hits = 0;
+  int number_of_hits = 0;
+
+  auto it_cluster = track->BeginCluster();
+  while (const auto *cluster = it_cluster.Next()) {
+    auto it_hit = cluster->BeginHit();
+    while (const auto *hit = it_hit.Next()) {
+      if (hit->GetDetectorId() == B2Detector::kBabyMind)
+	if (hit->GetView() == view &&
+	    hit->GetPlane() == plane)
+	  number_of_hits++;
+    }
+  }
+
+  return number_of_hits;
+}
+
+std::vector<double> GetBabyMindPlanePosition(const B2TrackSummary *track, int view, int plane) {
+
+  std::vector<double> position(2); // 0:X/Y, 1:Z
+  for (int i = 0; i < 2; i++)
+    position.at(i) = 0.;
+
+  int number_of_hits = GetBabyMindPlaneHits(track, view, plane);
+  if(number_of_hits == 0) return position;
 
   auto it_cluster = track->BeginCluster();
   while (const auto *cluster = it_cluster.Next()) {
@@ -127,78 +168,153 @@ std::vector<double> GetPlatePosition(const B2TrackSummary *track, int view, int 
       if (hit->GetDetectorId() == B2Detector::kBabyMind) {
 	if (hit->GetView() == view &&
 	    hit->GetPlane() == plane) {
-	  TVector3 babymind_position;
-	  B2Dimension::GetBabyMindPosition(track, (B2View)view, plane, hit->GetSlot(),
-					   babymind_position);
 	  if (view == B2View::kTopView)
-	    position.at(0) += babymind_position.GetValue().X();
+	    position.at(0) += hit->GetScintillatorPosition().GetValue().X();
 	  else if (view == B2View::kSideView)
-	    position.at(0) += babymind_position.GetValue().Y();
-	  position.at(1) += babymind_position.GetValue().Z();
-	  hits++
-	}
+	    position.at(0) += hit->GetScintillatorPosition().GetValue().Y();
 
+	  position.at(1) += hit->GetScintillatorPosition().GetValue().Z();
+	}
       }
     }
-    position.at(0) /= (double) hits; 
-    position.at(1) /= (double) hits;
+
+    for (int i = 0; i < 2; i++) position.at(i) /= number_of_hits;
   }
 
   return position;
 
 }
 
-std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track) {
+std::vector<double> GetBabyMindPlanePositionError(const B2TrackSummary *track, int view, int plane) {
 
-  std::vector<double> babymind_initial_direction(2);
+  std::vector<double> position_error(2); // 0:X/Y, 1:Z
+  for (int i = 0; i < 2; i++)
+    position_error.at(i) = 0.;
 
+  int number_of_hits = GetBabyMindPlaneHits(track, view, plane);
+  if (number_of_hits == 0) return position_error;
+
+  switch (view) {
+  case B2View::kSideView :
+    if (number_of_hits == 1) {
+      position_error.at(0) = 0.5 * BM_HORIZONTAL_SCINTI_LARGE / 3.;
+      position_error.at(1) = 0.5 * BM_HORIZONTAL_SCINTI_THICK;
+    }
+    else if (number_of_hits == 2) {
+      position_error.at(0) = 0.5 * BM_HORIZONTAL_SCINTI_LARGE / 3.;
+      position_error.at(1) = BM_HORIZONTAL_SCINTI_THICK;
+    }
+    else {
+      position_error.at(0) = 0.5 * (BM_HORIZONTAL_SCINTI_LARGE * (2 * number_of_hits - 1) / 3.);
+      position_error.at(1) = BM_HORIZONTAL_SCINTI_THICK;
+    }
+    break;
+  case B2View::kTopView :
+    if (number_of_hits == 1) {
+      position_error.at(0) = 0.5 * (BM_VERTICAL_SCINTI_LARGE - 2 * BM_VERTICAL_SCINTI_OVERLAP);
+      position_error.at(1) = 0.5 * BM_VERTICAL_SCINTI_THICK;
+    }
+    else if (number_of_hits == 2) {
+      position_error.at(0) = 0.5 * BM_VERTICAL_SCINTI_OVERLAP;
+      position_error.at(1) = 20.;
+    }
+    else {
+      position_error.at(0) = 0.5 * (BM_VERTICAL_SCINTI_LARGE * number_of_hits - BM_VERTICAL_SCINTI_OVERLAP * (number_of_hits + 1));
+      position_error.at(1) = 20.;
+    }
+    break;
+  }
+  
+  return position_error;
 
 }
 
-std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track) {
+std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, int entry) {
 
-  std::vector<double> babymind_initial_position(2);
-  babymind_initial_position.at(0) = 0.; babymind_initial_position.at(1) = 0.;
-  std::vector<int> babymind_hits(2);
-  babymind_hits.at(0) = 0; babymind_hits.at(1) = 0;
+  std::vector<double> param(2);
 
-  auto it_cluster = track->BeginCluster();
-  while (const auto *cluster = it_cluster.Next()) {
-    auto it_hit = cluster->BeginHit();
-    while (const auto *hit = it_hit.Next()) {
-      if (hit->GetDetectorId() == B2Detector::kBabyMind) {
-	if (hit->GetView() == B2View::kSideView
-	    && hit->GetPlane() == 0) {
-	  babymind_initial_position.at(0) += hit->GetAbsolutePosition().GetValue().Y();
-	  babymind_hits.at(0)++;
-	}
-	else if (hit->GetView() == B2View::kTopView 
-		 && hit->GetPlane() == 1) {
-	  babymind_initial_position.at(1) += hit->GetAbsolutePosition().GetValue().X();
-	  babymind_hits.at(1)++;
-	}
-      }
+  std::vector<double> x, z;
+  std::vector<double> x_error, z_error;
+  for (int iplane = 0; iplane < BM_NUM_TRACKING_PLANES; iplane++) {
+    if (GetBabyMindPlaneHits(track, B2View::kTopView, iplane)) {
+      x.push_back(GetBabyMindPlanePosition(track, B2View::kTopView, iplane).at(0));
+      z.push_back(GetBabyMindPlanePosition(track, B2View::kTopView, iplane).at(1));
+      x_error.push_back(GetBabyMindPlanePositionError(track, B2View::kTopView, iplane).at(0));
+      z_error.push_back(GetBabyMindPlanePositionError(track, B2View::kTopView, iplane).at(1));
     }
   }
 
-  babymind_initial_position.at(0) /= (double) babymind_hits.at(0);
-  babymind_initial_position.at(1) /= (double) babymind_hits.at(1);
-  return babymind_initial_position;
+  TGraphErrors *ge = new TGraphErrors(z.size(), &z[0], &x[0], &z_error[0], &x_error[0]);
+
+#ifdef CANVAS
+  ge->SetTitle(Form("Entry : %d", entry));
+  ge->Draw("AP");
+#endif
+
+  TF1 *linear = new TF1("linear", "[0] + [1] * x");
+  linear->SetParameter(0, x.front());
+  linear->SetParameter(1, (x.back() - x.front()) / (z.back() - z.front()));
+
+  ge->Fit(linear, "Q", "", z.front() - 100., z.back()+100.);
+  param.at(0) = linear->GetParameter(0);
+  param.at(1) = linear->GetParameter(1);
+
+#ifdef CANVAS
+  c->Print((TString)"test.pdf", "pdf");
+#endif
+
+  delete linear;
+
+  return param;
+
 }
 
-bool NinjaHitExpected(const B2TrackSummary *track) {
+std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCanvas *c, int entry) {
+  std::vector<double> initial_direction(2); // 0:X, 1:Y
+
+  // Vertical direction
+  initial_direction.at(1) = (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(0) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(0)) / (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(1) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(1));
+
+  // Horizontal direction
+  std::vector<double> param = FitBabyMindTopView(track, c, entry);
+  initial_direction.at(0) = param.at(1);
+
+  return initial_direction;
+
+}
+
+
+std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track, int view, TCanvas *c, int entry) {
+  std::vector<double> initial_position; // 0:X/Y, 1:Z
+
+  if (view == B2View::kSideView)
+    initial_position = GetBabyMindPlanePosition(track, view, 0);
+  else if (view == B2View::kTopView) {
+    std::vector<double> param = FitBabyMindTopView(track, c, entry);
+    initial_position.at(0) = param.at(0) + param.at(1) * 0.;
+  }
+    
+  return initial_position;
+
+}
+
+
+
+  bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
 
   // Extrapolated position
+    std::vector<double> initial_direction =  GetBabyMindInitialDirection(track, c, entry);
 
   if (track->GetType() == B2TrackedParticle::kPrimaryTrack) {
-    // Downstream WAGASCI interaction
-    return false;
+    // Downstream WAGASCI interaction TODO
+    if (false) return false;
   }
+
   return true; // TODO
 }
 
 void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMSummary* ntbm_out) {
-  
+  // std::vector erase を使う  
 }
 
 bool IsInRange(double pos, double min, double max) {
@@ -209,7 +325,7 @@ bool IsInRange(double pos, double min, double max) {
 bool IsMakeHit(double min, double max, int view, int plane, int slot) {
   TVector3 position;
   B2Dimension::GetPosNinjaTracker((B2View)view, plane, slot, position);
-  double position_xy;
+  double position_xy = 0.;
   switch (view) {
   case B2View::kTopView : 
     position_xy = position.X();
@@ -231,7 +347,7 @@ bool IsMakeHit(double min, double max, int view, int plane, int slot) {
 bool IsInGap(double min, double max, int view, int plane, int slot) {
   TVector3 position;
   B2Dimension::GetPosNinjaTracker((B2View)view, plane, slot, position);
-  double position_xy;
+  double position_xy = 0.;
   switch (view) {
   case B2View::kTopView : 
     position_xy = position.X();
@@ -313,11 +429,11 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 	    B2Dimension::GetPosNinjaTracker((B2View)iview, iplane, islot, start_of_track);
 	    double start_of_track_xy;
 	    switch (iview) {
-	    case 0 :
+	    case B2View::kTopView :
 	      start_of_track_xy = start_of_track.X()
 		+ NINJA_TRACKER_SCI_WIDTH / 2. * ( -1 + 2 * (ivertex/2) );
 	      break;
-	    case 1 :
+	    case B2View::kSideView :
 	      start_of_track_xy = start_of_track.Y()
 		+ NINJA_TRACKER_SCI_WIDTH / 2. * ( -1 + 2 * (ivertex/2) );
 	      break;
@@ -412,6 +528,8 @@ void SetTruePositionAngle(B2SpillSummary* spill_summary, NTBMSummary* ntbmsummar
 
 int main(int argc, char *argv[]) {
 
+  gErrorIgnoreLevel = kWarning;
+
   logging::core::get()->set_filter
     (
      logging::trivial::severity >= logging::trivial::debug
@@ -433,8 +551,17 @@ int main(int argc, char *argv[]) {
     NTBMSummary* my_ntbm = nullptr;
     ntbm_tree->Branch("NTBMSummary", &my_ntbm);
 
+    TCanvas *c = new TCanvas("c", "c");
+    c->Print((TString)"test.pdf" + "[", "pdf");
+
+    int nspill = 0;
+
     while (reader.ReadNextSpill() > 0) {
+      if (nspill > 1000) break;
+      nspill++;
+
       auto &input_spill_summary = reader.GetSpillSummary();
+      int entry = input_spill_summary.GetBeamSummary().GetTimestamp();
       NTBMSummary* ntbm_tmp = new NTBMSummary();
 
       // Create NINJA tracker hit cluster
@@ -456,7 +583,7 @@ int main(int argc, char *argv[]) {
       while (const auto *track = it_track.Next()) {
 	if (MyHasDetector(track, B2Detector::kBabyMind)) {
 	  number_of_tracks++;
-	  if (NinjaHitExpected(track)) {
+	  if (NinjaHitExpected(track, c, entry)) {
 	    //MatchBabyMindTrack(track, ntbm_tmp, my_ntbm);
 	  }
 	}
@@ -471,6 +598,9 @@ int main(int argc, char *argv[]) {
       ntbm_tree->Fill();
       my_ntbm->Clear("C");
     }
+
+    c->Print((TString)"test.pdf" + "]", "pdf");
+    delete c;
 
     ntbm_file->cd();
     ntbm_tree->Write();
