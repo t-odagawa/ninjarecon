@@ -1,5 +1,3 @@
-#define CANVAS
-
 // system includes
 #include <vector>
 #include <numeric>

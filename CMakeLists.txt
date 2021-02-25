@@ -65,6 +65,10 @@ set(CMAKE_INSTALL_INCDIR ${CMAKE_INSTALL_PREFIX}/include/ninja/recon)
 # where to look first for cmake modules
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
+if (${CANVAS})
+add_definitions(-DCANVAS=ON)
+endif()
+
 # ROOT
 list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
 find_package(ROOT 6.18 CONFIG REQUIRED)
