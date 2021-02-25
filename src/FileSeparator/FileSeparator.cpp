@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 
   logging::core::get()->set_filter
     (
-     logging::trivial::severity >= logging::trivial::debug
+     logging::trivial::severity >= logging::trivial::info
      );
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA File Separator Start==========";
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     UInt_t unixtime[NUM_SLOTS];
     Float_t pe[NUM_SLOTS];
     Int_t view[NUM_SLOTS], pln[NUM_SLOTS], ch[NUM_SLOTS];
-    
+
     input_nt_tree->SetBranchAddress("ADC", adc);
     input_nt_tree->SetBranchAddress("LEADTIME", lt);
     input_nt_tree->SetBranchAddress("TRAILTIME", tt);
@@ -52,6 +52,8 @@ int main(int argc, char *argv[]) {
     input_nt_tree->SetBranchAddress("VIEW", view);
     input_nt_tree->SetBranchAddress("PLN", pln);
     input_nt_tree->SetBranchAddress("CH", ch);
+
+    BOOST_LOG_TRIVIAL(debug) << "Tracker input file setting done";
 
     // Tracker output file settings
     TTree *output_nt_tree = new TTree("tree", "tree");
@@ -65,8 +67,11 @@ int main(int argc, char *argv[]) {
     output_nt_tree->Branch("PLN", pln, Form("PLN[%d]/I", NUM_SLOTS));
     output_nt_tree->Branch("CH", ch, Form("CH[%d]/I", NUM_SLOTS));
 
+    BOOST_LOG_TRIVIAL(debug) << "Tracker output file setting done";
+
     int start_time = 0, end_time = 0;
     int reader_entry = 0;
+
     while(reader.ReadNextSpill() > 0) {
       reader_entry++;
       auto &spill_summary = reader.GetSpillSummary();
