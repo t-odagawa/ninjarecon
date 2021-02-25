@@ -241,7 +241,7 @@ std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, 
       z_error.push_back(GetBabyMindPlanePositionError(track, B2View::kTopView, iplane).at(1));
     }
   }
-
+  BOOST_LOG_TRIVIAL(debug) << "Number of hit planes : " << z.size();
   TGraphErrors *ge = new TGraphErrors(z.size(), &z[0], &x[0], &z_error[0], &x_error[0]);
 
 #ifdef CANVAS
@@ -271,7 +271,11 @@ std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCa
   std::vector<double> initial_direction(2); // 0:X, 1:Y
 
   // Vertical direction
-  initial_direction.at(1) = (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(0) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(0)) / (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(1) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(1));
+  if (GetBabyMindPlaneHits(track, B2View::kSideView, 0) > 0 &&
+      GetBabyMindPlaneHits(track, B2View::kSideView, 1) > 0)
+    initial_direction.at(1) = (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(0) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(0)) / (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(1) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(1));
+  else 
+    initial_direction.at(1) = 0.;
 
   // Horizontal direction
   std::vector<double> param = FitBabyMindTopView(track, c, entry);
@@ -298,13 +302,20 @@ std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track, int 
 
 
 
-  bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
+bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
 
   // Extrapolated position
-    std::vector<double> initial_direction =  GetBabyMindInitialDirection(track, c, entry);
+  std::vector<double> initial_direction =  GetBabyMindInitialDirection(track, c, entry);
 
+  // Has hits in upstream planes
+  if (!(GetBabyMindPlaneHits(track, B2View::kSideView, 0) == 0 ||
+	GetBabyMindPlaneHits(track, B2View::kSideView, 1) == 0) ||
+      !(GetBabyMindPlaneHits(track, B2View::kTopView, 0) == 0 &&
+	GetBabyMindPlaneHits(track, B2View::kTopView, 1) == 0))
+    return false;
+
+  // Downstream WAGASCI interaction TODO
   if (track->GetType() == B2TrackedParticle::kPrimaryTrack) {
-    // Downstream WAGASCI interaction TODO
     if (false) return false;
   }
 
@@ -563,7 +574,8 @@ int main(int argc, char *argv[]) {
       auto &input_spill_summary = reader.GetSpillSummary();
       int entry = input_spill_summary.GetBeamSummary().GetTimestamp();
       NTBMSummary* ntbm_tmp = new NTBMSummary();
-
+      BOOST_LOG_TRIVIAL(debug) << "timestamp : " << entry;
+      if (entry > 1573746579) break;
       // Create NINJA tracker hit cluster
       auto it_hit = input_spill_summary.BeginHit();
       std::vector<const B2HitSummary* > ninja_hits;
