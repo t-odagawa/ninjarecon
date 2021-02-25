@@ -528,7 +528,9 @@ void SetTruePositionAngle(B2SpillSummary* spill_summary, NTBMSummary* ntbmsummar
 
 int main(int argc, char *argv[]) {
 
+#ifdef CANVAS
   gErrorIgnoreLevel = kWarning;
+#endif
 
   logging::core::get()->set_filter
     (
