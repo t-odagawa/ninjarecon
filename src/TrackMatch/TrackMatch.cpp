@@ -386,6 +386,28 @@ void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMS
   
   }
 
+  if (false) return;
+
+  // Create a new 2d cluster and add it
+  std::vector<int> number_of_hits(2);
+  std::vector<std::vector<int>> plane(2);
+  std::vector<std::vector<int>> slot(2);
+  std::vector<std::vector<double>> pe(2);
+  std::vector<double> ninja_position(2);
+  std::vector<double> ninja_tangent(2);
+
+  ntbm_in->SetNumberOfNinjaClusters(ntbm_in->GetNumberOfNinjaClusters() + 1);
+  for (int view = 0; view < 2; view++) {
+    number_of_hits.at(view) = ntbm_in->GetNumberOfHits(matched_cluster_tmp.at(view), view);
+    ninja_position.at(view) = ntbm_in->GetNinjaPosition(matched_cluster_tmp.at(view)).at(view);
+    ninja_tangent.at(view) = ntbm_in->GetNinjaTangent(matched_cluster_tmp.at(view)).at(view);
+    for (int hit = 0; hit < number_of_hits.at(view); hit++) {
+      plane.at(view).push_back(ntbm_in->GetPlane(matched_cluster_tmp.at(view), view, hit));
+      slot.at(view).push_back(ntbm_in->GetSlot(matched_cluster_tmp.at(view), view, hit));
+      pe.at(view).push_back(ntbm_in->GetPe(matched_cluster_tmp.at(view), view, hit));
+    }
+  }
+
 }
 
 bool IsInRange(double pos, double min, double max) {
