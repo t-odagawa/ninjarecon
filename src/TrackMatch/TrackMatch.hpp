@@ -7,6 +7,7 @@
 
 #include "B2SpillSummary.hh"
 #include "B2HitSummary.hh"
+#include "B2BeamSummary.hh"
 #include "B2TrackSummary.hh"
 #include "NTBMSummary.hh"
 
@@ -56,11 +57,13 @@ std::vector<double> GetBabyMindPlanePosition(const B2TrackSummary *track, int vi
 
 std::vector<double> GetBabyMindPlanePositionError(const B2TrackSummary *track, int view, int plane);
 
-std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, int entry);
+std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, int entry, bool draw);
 
-std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, int view, TCanvas *c, int entry);
+std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, int view, TCanvas *c, int entry, bool draw);
 
-std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track, int view, TCanvas *c, int entry);
+std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track, int view, TCanvas *c, int entry, bool draw);
+
+std::vector<double> CalculateExpectedPosition(const B2TrackSummary *track);
 
 /**
  * Check if the reconstructed track summary expected to have hits
@@ -143,7 +146,7 @@ void ReconstructNinjaTangent(NTBMSummary* ntbmsummary);
  */
 void ReconstructNinjaPosition(NTBMSummary* ntbmsummary);
 
-void SetTruePositionAngle(B2SpillSummary* spill_summary, NTBMSummary* ntbmsummary);
+void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbmsummary);
 
-void TransferBeamInfo(B2SpillSummary* spill_summary, NTBMSummary* ntbmsummary);
+void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbmsummary);
 #endif
