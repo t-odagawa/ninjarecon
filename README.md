@@ -108,13 +108,3 @@ push back each hits into the file.
 This program is used for track matching between NINJA tracker and WAGASCI-BabyMIND detectors.
 The merged file created in Hit Converter processes are analyzed and B2TrackSummary with NINJA
 tracker hit is created for each spill.
-
-### Emulsion Wrapper
-
-This program is used for data wrapper to give the scintillator detector information to
-the emulsion detector analyzers.
-This converts B2TrackSummary, B2BeamSummary, and so on into one simple class and enables them
-to be analyzed by any other NINJA people.
-
-
-

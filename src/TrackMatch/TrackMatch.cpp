@@ -242,6 +242,7 @@ std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, 
     }
   }
   BOOST_LOG_TRIVIAL(debug) << "Number of hit planes : " << z.size();
+  BOOST_LOG_TRIVIAL(debug) << "Track type : " << track->GetType();
   TGraphErrors *ge = new TGraphErrors(z.size(), &z[0], &x[0], &z_error[0], &x_error[0]);
 
 #ifdef CANVAS
@@ -535,6 +536,21 @@ void SetTruePositionAngle(B2SpillSummary* spill_summary, NTBMSummary* ntbmsummar
   }
 }
 
+void TransferBeamInfo(const B2SpillSummary *spill_summary, NTBMSummary *ntbm_summary) {
+  auto &beam_summary = spill_summary->GetBeamSummary();
+  ntbm_summary->SetSpillPot(beam_summary->GetSpillPot());
+  for (std::size_t bunch = 0; bunch < 8; bunch++)
+    ntbm_summary->SetBunchPot(bunch, beam_summary->GetBunchPot(bunch));
+  ntbm_summary->SetBsdSpillNumber(beam_summary->GetBsdSpillNumber());
+  ntbm_summary->SetTimestamp(beam_summary->GetTimestamp());
+  ntbm_summary->SetBsdGoodSpillFlag(beam_summary->GetBsdGoodSpillFlag());
+  ntbm_summary->SetWagasciGoodSpillFlag(beam_summary->GetWagasciGoodSpillFlag());
+}
+
+void TransferBabyMindTrackInfo(const B2TrackSummary *track_summary, NTBMSummary *ntbm_summary) {
+
+}
+
 int main(int argc, char *argv[]) {
 
 #ifdef CANVAS
@@ -573,9 +589,12 @@ int main(int argc, char *argv[]) {
 
       auto &input_spill_summary = reader.GetSpillSummary();
       int entry = input_spill_summary.GetBeamSummary().GetTimestamp();
-      NTBMSummary* ntbm_tmp = new NTBMSummary();
       BOOST_LOG_TRIVIAL(debug) << "timestamp : " << entry;
-      if (entry > 1573746579) break;
+
+      NTBMSummary* ntbm_tmp = new NTBMSummary();
+ 
+      TransferBeamInfo(input_spill_summary, my_ntbm);
+
       // Create NINJA tracker hit cluster
       auto it_hit = input_spill_summary.BeginHit();
       std::vector<const B2HitSummary* > ninja_hits;
@@ -594,9 +613,10 @@ int main(int argc, char *argv[]) {
       auto it_track = input_spill_summary.BeginReconTrack();
       while (const auto *track = it_track.Next()) {
 	if (MyHasDetector(track, B2Detector::kBabyMind)) {
+	  // TransferBabyMindTrackInfo(track, my_ntbm);
 	  number_of_tracks++;
 	  if (NinjaHitExpected(track, c, entry)) {
-	    //MatchBabyMindTrack(track, ntbm_tmp, my_ntbm);
+	    // MatchBabyMindTrack(track, ntbm_tmp, my_ntbm);
 	  }
 	}
       }

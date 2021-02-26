@@ -144,4 +144,6 @@ void ReconstructNinjaTangent(NTBMSummary* ntbmsummary);
 void ReconstructNinjaPosition(NTBMSummary* ntbmsummary);
 
 void SetTruePositionAngle(B2SpillSummary* spill_summary, NTBMSummary* ntbmsummary);
+
+void TransferBeamInfo(B2SpillSummary* spill_summary, NTBMSummary* ntbmsummary);
 #endif
