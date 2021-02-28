@@ -284,7 +284,8 @@ std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCa
   // Vertical direction
   if (GetBabyMindPlaneHits(track, B2View::kSideView, 0) > 0 &&
       GetBabyMindPlaneHits(track, B2View::kSideView, 1) > 0)
-    initial_direction.at(1) = (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(0) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(0)) / (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(1) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(1));
+    initial_direction.at(1) = (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(0) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(0))
+      / (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(1) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(1));
   else 
     initial_direction.at(1) = 0.;
 
@@ -303,8 +304,8 @@ std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track, int 
     initial_position = GetBabyMindPlanePosition(track, view, 0);
   else if (view == B2View::kTopView) {
     std::vector<double> param = FitBabyMindTopView(track, c, entry, draw);
-    initial_position.at(0) = param.at(0) + param.at(1) * 0.;
-    initial_position.at(1) = 0.;
+    initial_position.at(0) = param.at(0) + param.at(1) * BM_SECOND_LAYER_POS;
+    initial_position.at(1) = BM_SECOND_LAYER_POS;
   }
     
   return initial_position;
@@ -315,14 +316,25 @@ std::vector<double> CalculateExpectedPosition(const B2TrackSummary *track) {
 
   TCanvas *tmp = new TCanvas();
 
+  // Pre reconstructed position/direction in BM coordinate
   std::vector<double> initial_direction =  GetBabyMindInitialDirection(track, tmp, 0, false);
   std::vector<double> initial_position_x = GetBabyMindInitialPosition(track, B2View::kTopView, tmp, 0, false);
   std::vector<double> initial_position_y = GetBabyMindInitialPosition(track, B2View::kSideView, tmp, 0, false);
 
   std::vector<double> position(2);
 
-  position.at(B2View::kTopView)  = initial_position_x.at(0) - initial_direction.at(B2View::kTopView) * 0.;
-  position.at(B2View::kSideView) = initial_position_y.at(0) - initial_direction.at(B2View::kSideView) * 0.;
+  position.at(B2View::kTopView)  = initial_position_x.at(0) - initial_direction.at(B2View::kTopView) * NINJA_BABYMIND_DISTANCE[B2View::kTopView];
+  position.at(B2View::kSideView) = initial_position_y.at(0) - initial_direction.at(B2View::kSideView) * NINJA_BABYMIND_DISTANCE[B2View::kSideView];
+
+  // convert from BM coordinate to tracker one
+  position.at(B2View::kTopView)  = position.at(B2View::kTopView)
+    - BABYMIND_POS_X // global coordinate
+    + NINJA_POS_X // NINJA overall
+    + NINJA_TRACKER_POS_X; // NINJA tracker
+  position.at(B2View::kSideView) = position.at(B2View::kSideView)
+    - BABYMIND_POS_Y
+    + NINJA_POS_Y
+    + NINJA_TRACKER_POS_Y;
 
   delete tmp;
 
@@ -332,16 +344,15 @@ std::vector<double> CalculateExpectedPosition(const B2TrackSummary *track) {
 
 bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
 
-  // Extrapolated position
-  std::vector<double> hit_expected_position = CalculateExpectedPosition(track);
 
-  if (std::fabs(hit_expected_position.at(B2View::kTopView)  - 0.) > 0. ||
-      std::fabs(hit_expected_position.at(B2View::kSideView) - 0.) > 0.)
+  std::vector<double> hit_expected_position = CalculateExpectedPosition(track);
+  // Extrapolated position inside tracker area TODO
+  if (std::fabs(hit_expected_position.at(B2View::kTopView)) > 500. ||
+      std::fabs(hit_expected_position.at(B2View::kSideView)) > 500.)
     return false;
 
   // Has hits in upstream planes
-  if ((GetBabyMindPlaneHits(track, B2View::kSideView, 0) == 0 &&
-       GetBabyMindPlaneHits(track, B2View::kSideView, 1) == 0) ||
+  if (GetBabyMindPlaneHits(track, B2View::kSideView, 0) == 0 ||
       (GetBabyMindPlaneHits(track, B2View::kTopView, 0) == 0 &&
        GetBabyMindPlaneHits(track, B2View::kTopView, 1) == 0))
     return false;
@@ -354,18 +365,17 @@ bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
   return true; // TODO
 }
 
-void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMSummary* ntbm_out) {
+void MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTBMSummary* ntbm_in) {
 
   std::vector<double> hit_expected_position = CalculateExpectedPosition(track);
 
   std::vector<int> matched_cluster_tmp(2);
   std::vector<double> position_difference_tmp(2);
   for (int view = 0; view < 2; view++)
-    position_difference_tmp.at(view) = 50.;
+    position_difference_tmp.at(view) = 200.;
 
   for (int icluster = 0; icluster < ntbm_in->GetNumberOfNinjaClusters(); icluster++) {
     std::vector<int> number_of_hits = ntbm_in->GetNumberOfHits(icluster);
-    std::vector<double> ninja_position = ntbm_in->GetNinjaPosition(icluster);
 
     // Get view information from 1d NINJA cluster
     int view = -1;
@@ -376,17 +386,19 @@ void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMS
       view = B2View::kSideView;
     else continue;
 
+    std::vector<double> ninja_position = ntbm_in->GetNinjaPosition(icluster);
     std::vector<double> ninja_tangent = ntbm_in->GetNinjaTangent(icluster);
 
     if (std::fabs(hit_expected_position.at(view) - ninja_position.at(view))
-	< position_difference_tmp.at(view)) {
+	< std::fabs(position_difference_tmp.at(view))) {
       matched_cluster_tmp.at(view) = icluster;
-      position_difference_tmp.at(view) = std::fabs(hit_expected_position.at(view) - ninja_position.at(view));
+      position_difference_tmp.at(view) = hit_expected_position.at(view) - ninja_position.at(view);
     }
   
   }
 
-  if (false) return;
+  if (position_difference_tmp.at(0) >= 200. &&
+      position_difference_tmp.at(1) >= 200.) return;
 
   // Create a new 2d cluster and add it
   std::vector<int> number_of_hits(2);
@@ -397,6 +409,8 @@ void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMS
   std::vector<double> ninja_tangent(2);
 
   ntbm_in->SetNumberOfNinjaClusters(ntbm_in->GetNumberOfNinjaClusters() + 1);
+  int new_cluster_id = ntbm_in->GetNumberOfNinjaClusters() - 1;
+  ntbm_in->SetBabyMindTrackId(new_cluster_id, baby_mind_track_id);
   for (int view = 0; view < 2; view++) {
     number_of_hits.at(view) = ntbm_in->GetNumberOfHits(matched_cluster_tmp.at(view), view);
     ninja_position.at(view) = ntbm_in->GetNinjaPosition(matched_cluster_tmp.at(view)).at(view);
@@ -407,6 +421,13 @@ void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary* ntbm_in, NTBMS
       pe.at(view).push_back(ntbm_in->GetPe(matched_cluster_tmp.at(view), view, hit));
     }
   }
+
+  ntbm_in->SetNumberOfHits(new_cluster_id, number_of_hits);
+  ntbm_in->SetNinjaPosition(new_cluster_id, ninja_position);
+  ntbm_in->SetNinjaTangent(new_cluster_id, ninja_tangent);
+  ntbm_in->SetPlane(new_cluster_id, plane);
+  ntbm_in->SetSlot(new_cluster_id, slot);
+  ntbm_in->SetPe(new_cluster_id, pe);
 
 }
 
@@ -488,10 +509,20 @@ bool IsGoodTrack(bool *condition) {
 void ReconstructNinjaTangent(NTBMSummary* ntbmsummary) {
 
   for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaClusters(); icluster++) {
+    std::vector<int> number_of_hits = ntbmsummary->GetNumberOfHits(icluster);
 
     std::vector<double> tangent(2);
     int trackid = ntbmsummary->GetBabyMindTrackId(icluster);
+    if (trackid < 0) continue;
     std::vector<double> baby_mind_position = ntbmsummary->GetBabyMindPosition(trackid);
+    baby_mind_position.at(B2View::kTopView) = baby_mind_position.at(B2View::kTopView)
+      - BABYMIND_POS_X
+      + NINJA_POS_X
+      + NINJA_TRACKER_POS_X;
+    baby_mind_position.at(B2View::kSideView) = baby_mind_position.at(B2View::kSideView)
+      - BABYMIND_POS_Y
+      + NINJA_POS_Y
+      + NINJA_TRACKER_POS_Y;
     std::vector<double> ninja_position_tmp = ntbmsummary->GetNinjaPosition(icluster);
     for (int iview = 0; iview < 2; iview++) {
       tangent.at(iview) = (baby_mind_position.at(iview) - ninja_position_tmp.at(iview))
@@ -508,16 +539,24 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
  
     std::vector<double> tangent = ntbmsummary->GetNinjaTangent(icluster);
     // coordinate direction is fliped in reconstruction X coordinate
+
     tangent.at(B2View::kTopView) = -tangent.at(B2View::kTopView);
 
     std::vector<double> position(2);
-    std::vector<std::vector<double>> position_list = {}; // vector where good position candidates are filled
+    std::vector<std::vector<double>> position_list(2); // vector where good position candidates are filled
 
     for (int iview = 0; iview < 2; iview++) {
+      if (ntbmsummary->GetNumberOfHits(icluster, iview) == 0) continue;
       for (int iplane = 0; iplane < NINJA_TRACKER_NUM_PLANES; iplane++) {
 	for (int islot = 0; islot < NINJA_TRACKER_NUM_CHANNELS_ONE_PLANE; islot++) {
 	  for (int ivertex = 0; ivertex < 4; ivertex++) { // Number of vertices in one scintillator bar
-	    
+
+	    BOOST_LOG_TRIVIAL(debug) << "Cluster : " << icluster << " "
+				     << "View : " << iview << " "
+				     << "Plane : " << iplane << " "
+				     << "Slot : " << islot << " "
+				     << "Vertex : " << ivertex;
+
 	    TVector3 start_of_track;
 	    B2Dimension::GetPosNinjaTracker((B2View)iview, iplane, islot, start_of_track);
 	    double start_of_track_xy;
@@ -531,17 +570,17 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 		+ NINJA_TRACKER_SCI_WIDTH / 2. * ( -1 + 2 * (ivertex/2) );
 	      break;
 	    }
-	    
+
 	    // Check the line can make a hit pattern
 	    bool plane_condition[NINJA_TRACKER_NUM_PLANES] = {false};
-	    
+
 	    for (int jplane = 0; jplane < NINJA_TRACKER_NUM_PLANES; jplane++) {
 
 	      double track_area_min = GetTrackAreaMin(start_of_track_xy, tangent.at(iview),
 						      iplane, jplane, ivertex);
 	      double track_area_max = GetTrackAreaMax(start_of_track_xy, tangent.at(iview),
 						      iplane, jplane, ivertex);
-	    
+
 	      if (ntbmsummary->GetNumberOfHits(icluster, iview) > 0) {
 		for (int ihit = 0; ihit < ntbmsummary->GetNumberOfHits(icluster, iview); ihit++) {
 		  if (ntbmsummary->GetPlane(icluster, iview, ihit) == jplane) {
@@ -568,8 +607,10 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 
     // Use lines with good plane condition and reconstruct position
     for (int iview = 0; iview < 2; iview++) {
-      if (position_list.at(iview).size() > 0)
+      if (position_list.at(iview).size() > 0) {
+	std::sort(position_list.at(iview).begin(), position_list.at(iview).end());
 	position.at(iview) = (position_list.at(iview).front() + position_list.at(iview).back()) / 2.;
+      }
       else { // average of all scintillator bar position in the cluster
 	position.at(iview) = 0.;
 	for (int ihit = 0; ihit < ntbmsummary->GetNumberOfHits(icluster, iview); ihit++) {
@@ -590,18 +631,17 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
       } // fi
     } // iview
     
-    position.at(B2View::kSideView) -= NINJA_SCI_DIFF;
-    position.at(B2View::kTopView) = -position.at(B2View::kTopView);
+    position.at(B2View::kSideView) -= NINJA_SCI_DIFF;    
     position.at(B2View::kTopView) += NINJA_SCI_DIFF;
-
+    
     ntbmsummary->SetNinjaPosition(icluster, position);
   } // icluster
   
 }
 
-void SetTruePositionAngle(B2SpillSummary* spill_summary, NTBMSummary* ntbmsummary) {
+void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary) {
 
-  auto it_emulsion = spill_summary->BeginEmulsion();
+  auto it_emulsion = spill_summary.BeginEmulsion();
   while (const auto *emulsion = it_emulsion.Next()) {
     // Get position of TSS downstream film position
     if (emulsion->GetFilmType() == B2EmulsionType::kShifter && emulsion->GetPlate() == 15) {
@@ -610,8 +650,8 @@ void SetTruePositionAngle(B2SpillSummary* spill_summary, NTBMSummary* ntbmsummar
       if (!B2Pdg::IsMuon(particle_id)) continue;
 
       // Get most muon-like cluster and set true info
-      for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaClusters(); icluster++) {
-	std::vector<double> ninja_position = ntbmsummary->GetNinjaPosition(icluster);
+      for (int icluster = 0; icluster < ntbm_summary->GetNumberOfNinjaClusters(); icluster++) {
+	std::vector<double> ninja_position = ntbm_summary->GetNinjaPosition(icluster);
 
       }
 
@@ -688,14 +728,12 @@ int main(int argc, char *argv[]) {
     int nspill = 0;
 
     while (reader.ReadNextSpill() > 0) {
-      //if (nspill > 1000) break;
+      //if (nspill > 10) break;
       nspill++;
 
       auto &input_spill_summary = reader.GetSpillSummary();
       int entry = input_spill_summary.GetBeamSummary().GetTimestamp();
       BOOST_LOG_TRIVIAL(debug) << "timestamp : " << entry;
-
-      NTBMSummary* ntbm_tmp = new NTBMSummary();
  
       TransferBeamInfo(input_spill_summary, my_ntbm);
 
@@ -708,9 +746,10 @@ int main(int argc, char *argv[]) {
       }
 
       // Create X/Y NINJA clusters
-      if (ninja_hits.size() > 0)
-	//CreateNinjaCluster(ninja_hits, ntbm_tmp);
+      if (ninja_hits.size() > 0) {
 	CreateNinjaCluster(ninja_hits, my_ntbm);
+	ReconstructNinjaPosition(my_ntbm);
+      }
 
       // Extrapolate BabyMIND tracks to the NINJA position
       // and get the best cluster to match each BabyMIND track
@@ -720,18 +759,19 @@ int main(int argc, char *argv[]) {
 	if (MyHasDetector(track, B2Detector::kBabyMind)) {
 	  number_of_tracks++;
 	  if (NinjaHitExpected(track, c, entry)) {
-	    // MatchBabyMindTrack(track, ntbm_tmp, my_ntbm);
+	    MatchBabyMindTrack(track, number_of_tracks-1, my_ntbm);
 	  }
 	}
       }
       my_ntbm->SetNumberOfTracks(number_of_tracks);
-      if (number_of_tracks > 0)
+      if (number_of_tracks > 0) {
 	TransferBabyMindTrackInfo(input_spill_summary, my_ntbm);
       
-      // Update NINJA hit summary information
-      //ReconstructNinjaTangent(my_ntbm); // reconstruct tangent
-      //ReconstructNinjaPosition(my_ntbm); // use reconstructed tangent info
-      
+	// Update NINJA hit summary information
+	ReconstructNinjaTangent(my_ntbm); // reconstruct tangent
+	ReconstructNinjaPosition(my_ntbm); // use reconstructed tangent info
+      }
+
       // Create output file
       ntbm_tree->Fill();
       my_ntbm->Clear("C");

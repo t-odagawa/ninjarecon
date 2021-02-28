@@ -28,11 +28,13 @@ static const double NINJA_TRACKER_OFFSET_XY[NUMBER_OF_PLANES] = {25. * 5 / 6, 25
 ///> Offset from the 1st layer in NINJA tracker in Z direction
 static const double NINJA_TRACKER_OFFSET_Z[NUMBER_OF_PLANES] = {0., 6., 9., 15.};
 ///> Difference of NINJA tracker absolute position and reconstruction coordinate
-static const double NINJA_SCI_DIFF = 448.;
+static const double NINJA_SCI_DIFF = 448.; // mm
 ///> Distance between NINJA tracker and Baby MIND layer in interest
 static const double NINJA_BABYMIND_DISTANCE[NUMBER_OF_VIEWS] = {810., 1040.};
 ///> Baby MIND vertical scintillator overlap
-static const double BM_VERTICAL_SCINTI_OVERLAP = 35.5;
+static const double BM_VERTICAL_SCINTI_OVERLAP = 35.5; // mm
+///> Baby MIND second layer position in Baby MIND coordinate TODO
+static const double BM_SECOND_LAYER_POS = -1767.; // mm
 
 ///> Photoelectron threshold for the NINJA tracker
 static const double PE_THRESHOLD = 2.5;

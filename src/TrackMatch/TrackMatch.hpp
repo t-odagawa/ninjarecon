@@ -36,29 +36,44 @@ void CreateNinjaCluster(std::vector<const B2HitSummary*> ninja_hits, NTBMSummary
 bool MyHasDetector(const B2TrackSummary *track, B2Detector det);
 
 /**
- * Get incidenct track position on the upstream surface of Baby MIND
- * calculation is changed depending on the track type
- * @param track B2TrackSummary object
- * @return track position on the upstream surface of Baby MIND
+ * Get number of hits in each view of i-th plane of B2TrackSummary
+ * @param track reconstructed B2TrackSummary object
+ * @param view view
+ * @param plane plane
+ * @return number of hits
  */
-TVector3 CalculateTrackInitialPosition(const B2TrackSummary *track);
-
 int GetBabyMindPlaneHits(const B2TrackSummary *track, int view, int plane);
 
 /**
- * Get the averaged x(y)/z position vector in Baby MIND
+ * Get the averaged x(y)/z position vector in Baby MIND in Baby MIND coordinate
  * @param track reconstructed B2TrackSummary object
  * @param view view in interest
  * @param plane plane in interest
  * @return at(0) means x or y averaged position, at(1) does z
  */
-
 std::vector<double> GetBabyMindPlanePosition(const B2TrackSummary *track, int view, int plane);
 
+/**
+ * Get positional error vector in Baby MIND
+ * @param track reconstructed B2TrackSummary object
+ * @param view view in interest
+ * @param plane plane in interest
+ * @return at(0) means x or y positional error, at(1) does z
+ */
 std::vector<double> GetBabyMindPlanePositionError(const B2TrackSummary *track, int view, int plane);
 
+/**
+ * Fit Baby MIND top view with line
+ * @param track reconstructed B2TrackSummary object
+ * @param c TCanvas for drawing
+ * @param entry entry for canvas title
+ * @param draw true if draw result pdf is required
+ * @return at(0) means intercept and at(1) does slope in Baby MIND coordinate
+ */
 std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, int entry, bool draw);
 
+/**
+ */
 std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, int view, TCanvas *c, int entry, bool draw);
 
 std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track, int view, TCanvas *c, int entry, bool draw);
@@ -77,10 +92,10 @@ bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry);
  * Track matching between Baby MIND and NINJA tracker using x/y separated NTBMSummary
  * and Baby MIND B2TrackSummary
  * @param track B2TrackSummary object of Baby MIND track
+ * @param baby_mind_track_id Baby MIND track id (incremented from 0 NINJA internally)
  * @param ntbm_in NTBMSummary object created in the CreateNinjaCluster function
- * @param ntbm_out NTBMSummary object for 3D track matching
  */
-void MatchBabyMindTrack(const B2TrackSummary *track, NTBMSummary *ntbm_in, NTBMSummary *ntbm_out);
+void MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTBMSummary *ntbm_in);
 
 /**
  * Get boolean if the value is in range [min, max]
@@ -137,16 +152,34 @@ bool IsGoodTrack(bool *condition);
  * between NINJA tracker and Emulsion shifter
  * @param ntbmsummary NTBMSummary object after the MatchBabyMindTrack function
  */
-void ReconstructNinjaTangent(NTBMSummary* ntbmsummary);
+void ReconstructNinjaTangent(NTBMSummary* ntbm_summary);
 
 /**
  * Use Baby MIND information, reconstruct position for matching
  * between NINJA tracker and Emulsion shifter
  * @param ntbmsummary NTBMSummary object after the MatchBabyMindTrack function
  */
-void ReconstructNinjaPosition(NTBMSummary* ntbmsummary);
+void ReconstructNinjaPosition(NTBMSummary* ntbm_summary);
 
-void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbmsummary);
+/**
+ * Set TSS info as true position/angle information to evaluate
+ * tracker performance with MC
+ * @param spill_summary B2SpillSummary object
+ * @param ntbm_summary NTBMSummary object
+ */
+void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary);
 
-void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbmsummary);
+/**
+ * Transfer Beam information from B2BeamSummary to NTBMSummary
+ * @param spill_summary B2SpillSummary object
+ * @param ntbm_summary NTBMSummary object
+ */
+void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary);
+
+/**
+ * Transfer Baby MIND track info from B2TrackSummary to NTBMSummary
+ * @param spill_summary B2SpillSummary object
+ * @param ntbm_summary NTBMSummary object
+ */
+void TransferBabyMindTrackInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary);
 #endif
