@@ -506,6 +506,15 @@ bool IsGoodTrack(bool *condition) {
   return ret;
 }
 
+int GetNinjaTrackerPlaneHits(NTBMSummary* ntbmsummary, int cluster, int view, int plane) {
+  int planehit = 0;
+  for (int ihit = 0; ihit < ntbmsummary->GetNumberOfHits(cluster, view); ihit++) {
+    if (ntbmsummary->GetPlane(cluster, view, ihit) == plane) planehit++;
+  }
+
+  return planehit;
+}
+
 void ReconstructNinjaTangent(NTBMSummary* ntbmsummary) {
 
   for (int icluster = 0; icluster < ntbmsummary->GetNumberOfNinjaClusters(); icluster++) {
@@ -581,12 +590,11 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 	      double track_area_max = GetTrackAreaMax(start_of_track_xy, tangent.at(iview),
 						      iplane, jplane, ivertex);
 
-	      if (ntbmsummary->GetNumberOfHits(icluster, iview) > 0) {
+	      if (GetNinjaTrackerPlaneHits(ntbmsummary, icluster, iview, jplane) > 0) {
 		for (int ihit = 0; ihit < ntbmsummary->GetNumberOfHits(icluster, iview); ihit++) {
 		  if (ntbmsummary->GetPlane(icluster, iview, ihit) == jplane) {
 		    plane_condition[jplane] = IsMakeHit(track_area_min, track_area_max,
 							iview, jplane, ntbmsummary->GetSlot(icluster, iview, ihit));
-		    break;
 		  }
 		} // ihit
 	      } else {
@@ -597,9 +605,11 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 	      } // fi
 	    } // jplane
 
-	    if (IsGoodTrack(plane_condition))
-	      position_list.at(iview).push_back(start_of_track_xy + tangent.at(iview) * (0.));
-
+	    if (IsGoodTrack(plane_condition)) {
+	      BOOST_LOG_TRIVIAL(debug) << "Is Good Track";
+	      position_list.at(iview).push_back(start_of_track_xy + tangent.at(iview)
+						* (- NINJA_TRACKER_SCI_THICK * (ivertex % 2) - NINJA_TRACKER_OFFSET_Z[iplane] + NINJA_TRACKER_OFFSET_Z[2]));
+	    }
 	  } // ivertex
 	} // islot
       } // iplane

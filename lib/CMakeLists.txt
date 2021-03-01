@@ -4,9 +4,7 @@ root_generate_dictionary(G__NTBMDict
 	LINKDEF NTBMLinkDef.h)
 
 # libNTBM.so shared library
-add_library(libNTBM SHARED
-		    NTBMSummary.cc
-		    G__NTBMDict.cxx)
+add_library(libNTBM SHARED NTBMSummary.hh NTBMSummary.cc G__NTBMDict.cxx)
 
 # rename liblibNTBM into libNTBM
 set_target_properties(libNTBM PROPERTIES OUTPUT_NAME NTBM)
