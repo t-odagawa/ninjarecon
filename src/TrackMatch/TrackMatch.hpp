@@ -73,11 +73,31 @@ std::vector<double> GetBabyMindPlanePositionError(const B2TrackSummary *track, i
 std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, int entry, bool draw);
 
 /**
+ * Get Baby MIND initial direction
+ * @param track reconstructed B2TrackSummary object
+ * @param c TCanvas for drawing
+ * @param entry entry for canvas title
+ * @param draw true if draw result pdf is required (for FitBabyMindTopView function)
+ * @return at(0) means y and at(1) does x directions
  */
-std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, int view, TCanvas *c, int entry, bool draw);
+std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCanvas *c, int entry, bool draw);
 
+/**
+ * Get Baby MIND initial position
+ * @param track reconstructed B2TrackSummary object
+ * @param view view
+ * @param c TCanvas for drawing
+ * @param entry entry for canvas title
+ * @param draw true if draw result pdf is required
+ * @return at(0) means x or y and at(1) does z
+ */
 std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track, int view, TCanvas *c, int entry, bool draw);
 
+/**
+ * Calculate hit expected position on the NINJA tracker position
+ * @param track reconstructed B2TrackSumamry object
+ * @return at(0) means y and at(1) means x
+ */
 std::vector<double> CalculateExpectedPosition(const B2TrackSummary *track);
 
 /**
@@ -146,6 +166,16 @@ double GetTrackAreMax(double pos, double tangent, int iplane, int jplane, int ve
  * @param condition four element array of boolean
  */
 bool IsGoodTrack(bool *condition);
+
+/**
+ * Get number of hits in NINJA tracker one plane
+ * @param ntbm_summary NTBMSummary object
+ * @param cluster cluster
+ * @param view view
+ * @param plane plane
+ * @return number of hits in the plane
+ */
+int GetNinjaTrackerPlaneHits(NTBMSummary *ntbm_summary, int cluster, int view, int plane);
 
 /**
  * Use Baby MIND information, reconstruct tangent for matching
