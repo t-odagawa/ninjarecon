@@ -684,8 +684,8 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
   while (const auto *track = it_track.Next()) {
     if (MyHasDetector(track, B2Detector::kBabyMind)) {
       ntbm_summary->SetTrackType(itrack, track->GetType());
-      ntbm_summary->SetMomentum(itrack, track->GetInitialAbsoluteMomentum().GetValue());
-      ntbm_summary->SetMomentumError(itrack, track->GetInitialAbsoluteMomentum().GetError());
+      ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
+      ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
       for (int view = 0; view < 2; view++) {
 	ntbm_summary->SetBabyMindPosition(itrack, view,
 					  GetBabyMindInitialPosition(track, view, tmp, 0, false).at(0));

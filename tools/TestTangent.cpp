@@ -26,8 +26,8 @@ int main (int argc, char *argv[]) {
 
   logging::core::get()->set_filter
     (
-     //logging::trivial::severity >= logging::trivial::info
-     logging::trivial::severity >= logging::trivial::debug
+     logging::trivial::severity >= logging::trivial::info
+     //logging::trivial::severity >= logging::trivial::debug
      );
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Tracker Check Start==========";
