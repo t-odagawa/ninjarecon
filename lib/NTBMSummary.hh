@@ -232,6 +232,14 @@ public :
 
   int GetTrueParticleId(int cluster, int particle) const;
 
+  void SetNormalization(double normalization);
+
+  double GetNormalization() const;
+
+  void SetTotalCrossSection(double total_cross_section);
+
+  double GetTotalCrossSection() const;
+
   void SetTruePosition(int cluster, int particle, int view, double true_position);
 
   void SetTruePosition(int cluster, int particle, std::vector<double> true_position);
@@ -323,6 +331,10 @@ private :
   std::vector<std::vector<double>> ninja_tangent_error_;
   ///> True particle information for MC
   ///> cluster -> true particle -> view(2)
+  ///> Noramalization factor from beam MC
+  double normalization_;
+  ///> Total cross section from NEUT
+  double total_cross_section_;
   ///> Number of true particles making one cluster
   std::vector<int> number_of_true_particles_;
   ///> PDG particle id of true particles
@@ -332,7 +344,7 @@ private :
   ///> True tangent
   std::vector<std::vector<std::vector<double>>> true_tangent_;
 
-  ClassDefOverride(NTBMSummary, 6) // NT BM Summary
+  ClassDefOverride(NTBMSummary, 7) // NT BM Summary
 };
 
 #endif

@@ -33,6 +33,12 @@ void NTBMSummary::Clear(Option_t *option) {
   bunch_difference_.clear();
   ninja_position_.clear();
   ninja_tangent_.clear();
+  normalization_ = -1.;
+  total_cross_section_ = -1.;
+  number_of_true_particles_.clear();
+  true_particle_id_.clear();
+  true_position_.clear();
+  true_tangent_.clear();
   TObject::Clear(option);
 }
 
@@ -74,7 +80,7 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
        << obj.baby_mind_position_error_.at(i).at(0) << ", "
        << obj.baby_mind_position_.at(i).at(1) << "+/-"
        << obj.baby_mind_position_error_.at(i).at(1) << " )\n";
-       }
+  }
   os << "\n"
      << "Baby MIND initial tangent = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
@@ -115,11 +121,13 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
     os << i + 1 << " : X : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(0); j++) {
-      os << obj.plane_.at(i).at(0).at(j) << ", ";
+      os << obj.plane_.at(i).at(0).at(j);
+      if (j != obj.number_of_hits_.at(i).at(0) - 1) os << ", ";
     }
     os << " ), Y : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(1); j++) {
-      os << obj.plane_.at(i).at(1).at(j) << ", ";
+      os << obj.plane_.at(i).at(1).at(j);
+      if (j != obj.number_of_hits_.at(i).at(1) - 1) os << ", ";
     }
     os << " )\n";
   }
@@ -128,11 +136,13 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
     os << i + 1 << " : X : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(0); j++) {
-      os << obj.slot_.at(i).at(0).at(j) << ", ";
+      os << obj.slot_.at(i).at(0).at(j);
+      if (j != obj.number_of_hits_.at(i).at(0) - 1) os << ", ";
     }
     os << " ), Y : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(1); j++) {
-      os << obj.slot_.at(i).at(1).at(j) << ", ";
+      os << obj.slot_.at(i).at(1).at(j);
+      if (j != obj.number_of_hits_.at(i).at(0) - 1) os << ", ";
     }
     os << " )\n";   
   }
@@ -141,24 +151,25 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
     os << i + 1 << " : X : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(0); j++) {
-      os << obj.pe_.at(i).at(0).at(j) << ", ";
+      os << obj.pe_.at(i).at(0).at(j);
+      if (j != obj.number_of_hits_.at(i).at(0) - 1) os << ", ";
     }
     os << " ), Y : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(1); j++) {
-      os << obj.pe_.at(i).at(1).at(j) << ", ";
+      os << obj.pe_.at(i).at(1).at(j);
+      if (j != obj.number_of_hits_.at(i).at(1) - 1) os << ", ";
     }
     os << " )\n";
   }
   os << "\n"
      << "Bunch difference from the first matched bunch = ";
-    for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-      os << i + 1 << obj.bunch_difference_.at(i);
-    if (i != obj.number_of_ninja_clusters_ - 1)
-      os << ", ";
+  for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
+    os << i + 1 << obj.bunch_difference_.at(i);
+    if (i != obj.number_of_ninja_clusters_ - 1) os << ", ";
   }
   os << "\n"
      << "NINJA tracker reconstructed position = ";
-    for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
+  for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
     os << i + 1 << " : ( "
        << obj.ninja_position_.at(i).at(0) << " +/- "
        << obj.ninja_position_error_.at(i).at(0) << ", "
@@ -167,14 +178,17 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   }
   os << "\n"
      << "NINJA tracker reconstructed tangent = ";
-    for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
+  for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
     os << i + 1 << " : ( "
        << obj.ninja_tangent_.at(i).at(0) << " +/- "
        << obj.ninja_tangent_error_.at(i).at(0) << ", "
        << obj.ninja_tangent_.at(i).at(1) << " +/- "
        << obj.ninja_tangent_error_.at(i).at(1) << " )\n";
   }
-
+  os << "\n"
+     << "Normalization factor = " << obj.normalization_ << "\n"
+     << "Total cross section = " << obj.total_cross_section_ << "\n";
+  
   return os;
 }
 
@@ -724,6 +738,22 @@ std::vector<int> NTBMSummary::GetTrueParticleId(int cluster) const {
 
 int NTBMSummary::GetTrueParticleId(int cluster, int particle) const {
   return GetTrueParticleId(cluster).at(particle);
+}
+
+void NTBMSummary::SetNormalization(double normalization) {
+  normalization_ = normalization;
+}
+
+double NTBMSummary::GetNormalization() const {
+  return normalization_;
+}
+
+void NTBMSummary::SetTotalCrossSection(double total_cross_section) {
+  total_cross_section_ = total_cross_section;
+}
+
+double NTBMSummary::GetTotalCrossSection() const {
+  return total_cross_section_;
 }
 
 void NTBMSummary::SetTruePosition(int cluster, int particle, int view, double true_position) {
