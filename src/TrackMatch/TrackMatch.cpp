@@ -683,7 +683,13 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
   TCanvas *tmp = new TCanvas();
   while (const auto *track = it_track.Next()) {
     if (MyHasDetector(track, B2Detector::kBabyMind)) {
-      ntbm_summary->SetTrackType(itrack, track->GetType());
+      if (MyHasDetector(track, B2Detector::kProtonModule) ||
+	  MyHasDetector(track, B2Detector::kWagasciUpstream)) { // upstream veto
+	ntbm_summary->SetTrackType(itrack, 1);
+      } else {
+	ntbm_summary->SetTrackType(itrack, 0);
+      }
+
       ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
       ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
       for (int view = 0; view < 2; view++) {
@@ -696,6 +702,13 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
   } 
 
   delete tmp;
+}
+
+void TransferMCInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summary) {
+  auto it_event = spill_summary.BeginTrueEvent();
+  const auto *event = it_event.Next();
+  ntbm_summary->SetNormalization(event->GetNormalization());
+  ntbm_summary->SetTotalCrossSection(event->GetTotalCrossSection());
 }
 
 int main(int argc, char *argv[]) {

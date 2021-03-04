@@ -33,8 +33,8 @@ void NTBMSummary::Clear(Option_t *option) {
   bunch_difference_.clear();
   ninja_position_.clear();
   ninja_tangent_.clear();
-  normalization_ = -1.;
-  total_cross_section_ = -1.;
+  normalization_ = 1.;
+  total_cross_section_ = 1.;
   number_of_true_particles_.clear();
   true_particle_id_.clear();
   true_position_.clear();
