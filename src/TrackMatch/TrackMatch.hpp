@@ -212,4 +212,11 @@ void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_sum
  * @param ntbm_summary NTBMSummary object
  */
 void TransferBabyMindTrackInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary);
+
+/**
+ * Transfer MC normalization info from B2EventSummary to NTBMSummary
+ * @param spill_summary B2SpillSummary object
+ * @param ntbmsummary NTBMSummary object
+ */
+void TransferMCInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary);
 #endif

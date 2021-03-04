@@ -755,6 +755,7 @@ int main(int argc, char *argv[]) {
       BOOST_LOG_TRIVIAL(debug) << "timestamp : " << entry;
  
       TransferBeamInfo(input_spill_summary, my_ntbm);
+      TransferMCInfo(input_spill_summary, my_ntbm);
 
       // Create NINJA tracker hit cluster
       auto it_hit = input_spill_summary.BeginHit();
