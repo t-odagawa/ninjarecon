@@ -33,6 +33,8 @@ static const double NINJA_SCI_DIFF = 448.; // mm
 static const double NINJA_BABYMIND_DISTANCE[NUMBER_OF_VIEWS] = {810., 1040.};
 ///> Baby MIND vertical scintillator overlap
 static const double BM_VERTICAL_SCINTI_OVERLAP = 35.5; // mm
+///> Baby MIND first layer position in Baby MIND coordinate TODO
+static const double BM_FIRST_LAYER_POS = -1990.; // mm
 ///> Baby MIND second layer position in Baby MIND coordinate TODO
 static const double BM_SECOND_LAYER_POS = -1767.; // mm
 
