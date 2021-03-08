@@ -66,25 +66,35 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
   std::vector<std::vector<std::vector<int>>> plane = {}, slot = {};
   std::vector<std::vector<std::vector<double>>> pe = {};
 
-  for (const auto ninja_hit : ninja_hits) {
-    double ninja_hit_position_tmp_ = 0.;
+  for (int ihit = 0; ihit < ninja_hits.size(); ihit++) {
+    const auto ninja_hit = ninja_hits.at(ihit);
+    double ninja_hit_position = 0.;
     if (ninja_hit->GetView() == B2View::kSideView)
-      ninja_hit_position_tmp_ = ninja_hit->GetScintillatorPosition().GetValue().Y();
-    else if (ninja_hit->GetView() == B2View::kTopView)
-      ninja_hit_position_tmp_ = ninja_hit->GetScintillatorPosition().GetValue().X();
+      ninja_hit_position = ninja_hit->GetScintillatorPosition().GetValue().Y();
+    else if (ninja_hit->GetView() == B2View::kTopView) 
+      ninja_hit_position = ninja_hit->GetScintillatorPosition().GetValue().X();
 
-    // when scintillators have a gap, create new NINJA cluster
-    if ( ( ninja_hit != ninja_hits.front() )
-	&& ( ninja_hit_position_tmp_ >  scintillator_position_tmp + NINJA_TRACKER_SCI_WIDTH
-	     || ninja_hit->GetView() != view_tmp || ninja_hit == ninja_hits.back()) ) {
+    int view_next = -1;
+    double ninja_hit_next_position = 0.;
+    if (ihit != ninja_hits.size() - 1) {
+      const auto ninja_hit_next = ninja_hits.at(ihit + 1);
+      view_next = ninja_hit_next->GetView();
+      if (ninja_hit_next->GetView() == B2View::kSideView)
+	ninja_hit_next_position = ninja_hit_next->GetScintillatorPosition().GetValue().Y();
+      else if (ninja_hit_next->GetView() == B2View::kTopView)
+	ninja_hit_next_position = ninja_hit_next->GetScintillatorPosition().GetValue().X();
+    }
 
-      if (ninja_hit == ninja_hits.back()) { // push back at the end of the vector
-	number_of_hits_tmp.at(ninja_hit->GetView())++;
-	plane_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetPlane());
-	slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()));
-	pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetSingleReadout()));	
-      }
-
+    number_of_hits_tmp.at(ninja_hit->GetView())++;
+    plane_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetPlane());
+    slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()));
+    pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetSingleReadout()));
+    
+    // when scintillators have a gap, create a new NINJA cluster
+    if ( ( ( ihit < ninja_hits.size() - 1 ) && 
+	   ( ninja_hit_next_position > ninja_hit_position + NINJA_TRACKER_SCI_WIDTH
+	     || view_next != ninja_hit->GetView() ) )
+	 || ( ihit == ninja_hits.size() - 1 ) ) {
       number_of_ninja_clusters++;
       number_of_hits.push_back(number_of_hits_tmp); number_of_hits_tmp.assign(2,0);
       plane.push_back(plane_tmp);
@@ -94,14 +104,6 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
       pe.push_back(pe_tmp);
       pe_tmp.at(0) = {}; pe_tmp.at(1) = {};
     }
-
-    number_of_hits_tmp.at(ninja_hit->GetView())++;
-    plane_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetPlane());
-    slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()));
-    pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetSingleReadout()));
-
-    scintillator_position_tmp = ninja_hit_position_tmp_;
-    view_tmp = ninja_hit->GetView();
 
   }
 
@@ -747,11 +749,12 @@ int main(int argc, char *argv[]) {
     int nspill = 0;
 
     while (reader.ReadNextSpill() > 0) {
-      //if (nspill > 34) break;
+      //if (nspill > 1000) break;
       nspill++;
 
       auto &input_spill_summary = reader.GetSpillSummary();
       int entry = input_spill_summary.GetBeamSummary().GetTimestamp();
+      BOOST_LOG_TRIVIAL(debug) << "entry : " << nspill;
       BOOST_LOG_TRIVIAL(debug) << "timestamp : " << entry;
  
       TransferBeamInfo(input_spill_summary, my_ntbm);

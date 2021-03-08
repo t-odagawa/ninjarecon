@@ -69,6 +69,10 @@ if (${CANVAS})
 add_definitions(-DCANVAS=ON)
 endif()
 
+if (${MC})
+add_definitions(-DMC=ON)
+endif()
+
 # ROOT
 list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
 find_package(ROOT 6.18 CONFIG REQUIRED)

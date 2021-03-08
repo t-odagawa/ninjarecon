@@ -9,6 +9,7 @@
 
 // B2 includes
 #include <B2Enum.hh>
+#include <B2Const.hh>
 
 // root includes
 #include <TFile.h>
@@ -22,12 +23,58 @@
 
 namespace logging = boost::log;
 
+double weightcalculator(int detector, int material, double norm, double xsec) {
+  static const double avogadro_constant = 6.0 * std::pow(10, 23);
+  static const double xsec_factor = std::pow(10, -38);
+  double thick;
+  switch (detector) {
+  case B2Detector::kProtonModule :
+    thick = PM_SCIBAR_REGION_THICKNESS + PM_VETO_REGION_THICKNESS;
+    break;
+  case B2Detector::kWagasciUpstream :
+  case B2Detector::kWagasciDownstream :
+    thick = WGS_WATER_BOX_DEPTH;
+    break;
+  case B2Detector::kWallMrdSouth :
+  case B2Detector::kWallMrdNorth :
+    thick = WM_INNER_IRON_PLATE_LARGE;
+    break;
+  case B2Detector::kBabyMind :
+    thick = BM_IRON_PLATE_DEPTH * BM_NUM_IRON_PLANES;
+    break;
+  case B2Detector::kYasuTracker :
+    thick = YASU_NUM_PLANES * WM_SCINTI_THICK;
+    break;
+  case B2Detector::kWall :
+    thick = HALL_RADIUS_THICK;
+    break;
+  case B2Detector::kNinja :
+    switch (material) {
+    case B2Material::kWater :
+      thick = NINJA_WATER_LAYER_THICK * NINJA_ECC_WATER_LAYERS;
+      break;
+    case B2Material::kIron :
+      thick = NINJA_IRON_LAYER_THICK * NINJA_ECC_IRON_LAYERS;
+      break;
+    default :
+      throw std::invalid_argument("NINJA material not recognized");
+    }
+    break;
+  default :
+    throw std::invalid_argument("Detector not recognized");
+  }
+
+  thick *= .1; // convert from mm to cm
+  return avogadro_constant * thick * norm * xsec * xsec_factor;
+
+}
+
 int main (int argc, char *argv[]) {
 
   logging::core::get()->set_filter
     (
-     logging::trivial::severity >= logging::trivial::info
-     //logging::trivial::severity >= logging::trivial::debug
+     //logging::trivial::severity >= logging::trivial::info
+     logging::trivial::severity >= logging::trivial::debug
      );
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Tracker Check Start==========";
@@ -55,15 +102,21 @@ int main (int argc, char *argv[]) {
 
     for (int ientry = 0; ientry < tree->GetEntries(); ientry++) {
       tree->GetEntry(ientry);
+#ifdef MC
+      double weight = weightcalculator(B2Detector::kWall, B2Material::kWater,
+				       ntbm->GetNormalization(), ntbm->GetTotalCrossSection());
+#else
+      double weight = 1.;
+#endif
       for (int icluster = 0; icluster < ntbm->GetNumberOfNinjaClusters(); icluster++) {
 	// Only 2d matched cluster
 	if (ntbm->GetNumberOfHits(icluster, B2View::kSideView) == 0 ||
 	    ntbm->GetNumberOfHits(icluster, B2View::kTopView) == 0) continue;
-	BOOST_LOG_TRIVIAL(debug) << "2d cluster!";
+	BOOST_LOG_TRIVIAL(debug) << "2d cluster : " << ientry;
 	std::vector<double> position = ntbm->GetNinjaPosition(icluster);
-	hist_pos_y->Fill(position.at(B2View::kSideView));
-	hist_pos_x->Fill(position.at(B2View::kTopView));
-	hist_pos_xy->Fill(position.at(B2View::kTopView), position.at(B2View::kSideView));
+	hist_pos_y->Fill(position.at(B2View::kSideView), weight);
+	hist_pos_x->Fill(position.at(B2View::kTopView), weight);
+	hist_pos_xy->Fill(position.at(B2View::kTopView), position.at(B2View::kSideView), weight);
       }
     }
 

@@ -119,12 +119,12 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "Plane list = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : X : ( ";
+    os << i + 1 << " : Y : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(0); j++) {
       os << obj.plane_.at(i).at(0).at(j);
       if (j != obj.number_of_hits_.at(i).at(0) - 1) os << ", ";
     }
-    os << " ), Y : ( ";
+    os << " ), X : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(1); j++) {
       os << obj.plane_.at(i).at(1).at(j);
       if (j != obj.number_of_hits_.at(i).at(1) - 1) os << ", ";
@@ -134,27 +134,27 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "Slot list = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : X : ( ";
+    os << i + 1 << " : Y : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(0); j++) {
       os << obj.slot_.at(i).at(0).at(j);
       if (j != obj.number_of_hits_.at(i).at(0) - 1) os << ", ";
     }
-    os << " ), Y : ( ";
+    os << " ), X : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(1); j++) {
       os << obj.slot_.at(i).at(1).at(j);
-      if (j != obj.number_of_hits_.at(i).at(0) - 1) os << ", ";
+      if (j != obj.number_of_hits_.at(i).at(1) - 1) os << ", ";
     }
     os << " )\n";   
   }
   os << "\n"
-     << "Photoelectrons of Time over Threshold list = ";
+     << "Photoelectrons or Time over Threshold list = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : X : ( ";
+    os << i + 1 << " : Y : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(0); j++) {
       os << obj.pe_.at(i).at(0).at(j);
       if (j != obj.number_of_hits_.at(i).at(0) - 1) os << ", ";
     }
-    os << " ), Y : ( ";
+    os << " ), X : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(1); j++) {
       os << obj.pe_.at(i).at(1).at(j);
       if (j != obj.number_of_hits_.at(i).at(1) - 1) os << ", ";
