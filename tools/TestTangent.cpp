@@ -123,9 +123,6 @@ int main (int argc, char *argv[]) {
     hist_ang_y->Write();
     hist_ang_x->Write();
     hist_ang_xy->Write();
-    hist_ang_y_nonzero->Write();
-    hist_ang_x_nonzero->Write();
-    hist_ang_xy_nonzero->Write();
     output->Close();
     
   } catch (const std::runtime_error &error) {
