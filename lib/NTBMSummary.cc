@@ -103,6 +103,12 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }
   os << "\n"
+     << "Bunch = ";
+  for (int i = 0; i < obj.number_of_tracks_; i++) {
+    os << i + 1 << " : " << obj.bunch_.at(i);
+    if(i != obj.number_of_tracks_ - 1) os << ", ";
+  }
+  os << "\n"
      << "Number of NINJA clusters = " << obj.number_of_ninja_clusters_ << "\n"
      << "Corresponding Baby MIND track ID = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {

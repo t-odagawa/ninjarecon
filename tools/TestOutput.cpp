@@ -22,14 +22,22 @@ int main (int argc, char *argv[]) {
      logging::trivial::severity >= logging::trivial::info
      );
 
-  if (argc != 4) {
+
+  Int_t start = 0;
+  Int_t end = 0;
+
+  if (argc == 3) {
+    start = atoi(argv[2]);
+    end = start + 1;
+  } else if (argc == 4) {
+    start = atoi(argv[2]);
+    end = atoi(argv[3]);
+  } else {
     BOOST_LOG_TRIVIAL(error) << "Usage : " << argv[0]
 			     << "<input NTBM file path> <start entry> <end entry>";
+    BOOST_LOG_TRIVIAL(error) << "<end entry> is optional";
     std::exit(1);
   }
-
-  Int_t start = atoi(argv[2]);
-  Int_t end = atoi(argv[3]);
 
   if (start < 0) {
     BOOST_LOG_TRIVIAL(error) << "Start entry shold be positive : " << argv[2];

@@ -705,6 +705,7 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
 	ntbm_summary->SetTrackType(itrack, 0);
       }
 
+      ntbm_summary->SetBunch(itrack, track->GetBunch());
       ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
       ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
       for (int view = 0; view < 2; view++) {
