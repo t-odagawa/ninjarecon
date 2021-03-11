@@ -7,9 +7,6 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
-// B2 includes
-#include <B2Enum.hh>
-
 // root includes
 #include <TFile.h>
 #include <TTree.h>
