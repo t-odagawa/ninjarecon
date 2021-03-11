@@ -262,7 +262,7 @@ std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, 
   linear->SetParameter(0, x.front());
   linear->SetParameter(1, (x.back() - x.front()) / (z.back() - z.front()));
 
-  ge->Fit(linear, "Q", "", z.front() - 100., z.back()+100.);
+  ge->Fit(linear, "Q", "", z.front() - 10., z.back() + 10.);
   param.at(0) = linear->GetParameter(0);
   param.at(1) = linear->GetParameter(1);
 
@@ -284,7 +284,8 @@ std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCa
   if (GetBabyMindPlaneHits(track, B2View::kSideView, 0) > 0 &&
       GetBabyMindPlaneHits(track, B2View::kSideView, 1) > 0)
     initial_direction.at(B2View::kSideView) = (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(0) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(0))
-      / (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(1) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(1));
+      //      / (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(1) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(1));
+      / 254.5;
   else 
     initial_direction.at(B2View::kSideView) = 0.;
 
@@ -321,18 +322,23 @@ std::vector<double> CalculateExpectedPosition(const B2TrackSummary *track) {
   std::vector<double> initial_position_y = GetBabyMindInitialPosition(track, B2View::kSideView, tmp, 0, false);
 
   std::vector<double> position(2);
-  position.at(B2View::kTopView)  = initial_position_x.at(0) - initial_direction.at(B2View::kTopView) * NINJA_BABYMIND_DISTANCE[B2View::kTopView];
-  position.at(B2View::kSideView) = initial_position_y.at(0) - initial_direction.at(B2View::kSideView) * NINJA_BABYMIND_DISTANCE[B2View::kSideView];
+  double distance[2];
+  distance[B2View::kTopView] = BABYMIND_POS_Z + BM_SECOND_LAYER_POS
+    - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10. - 143.;
+  distance[B2View::kSideView] = BABYMIND_POS_Z + BM_FIRST_LAYER_POS
+    - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10. - 143.;
+  position.at(B2View::kTopView)  = initial_position_x.at(0) - initial_direction.at(B2View::kTopView) * distance[B2View::kTopView];
+  position.at(B2View::kSideView) = initial_position_y.at(0) - initial_direction.at(B2View::kSideView) * distance[B2View::kSideView];
 
   // convert from BM coordinate to tracker one
   position.at(B2View::kTopView)  = position.at(B2View::kTopView)
     + BABYMIND_POS_X // global coordinate
     - NINJA_POS_X // NINJA overall
-    - NINJA_TRACKER_POS_X; // NINJA tracker
+    - NINJA_TRACKER_POS_X + 6.; // NINJA tracker
   position.at(B2View::kSideView) = position.at(B2View::kSideView)
     + BABYMIND_POS_Y
     - NINJA_POS_Y
-    - NINJA_TRACKER_POS_Y;
+    - NINJA_TRACKER_POS_Y + 22.;
 
   delete tmp;
 
@@ -345,8 +351,10 @@ bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
 
   std::vector<double> hit_expected_position = CalculateExpectedPosition(track);
   // Extrapolated position inside tracker area TODO
-  if (std::fabs(hit_expected_position.at(B2View::kTopView)) > 500. ||
-      std::fabs(hit_expected_position.at(B2View::kSideView)) > 500.)
+  if ( ( hit_expected_position.at(B2View::kTopView) < -600. - 100. ||
+         hit_expected_position.at(B2View::kTopView) > 448. + 100. ) ||
+       ( hit_expected_position.at(B2View::kSideView) < -448. - 100. ||
+	 hit_expected_position.at(B2View::kSideView) > 600.  + 100. ) )
     return false;
 
   // Has hits in upstream planes
@@ -369,8 +377,9 @@ void MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTB
 
   std::vector<int> matched_cluster_tmp(2);
   std::vector<double> position_difference_tmp(2);
-  for (int view = 0; view < 2; view++)
-    position_difference_tmp.at(view) = 200.;
+  
+  position_difference_tmp.at(B2View::kSideView) = 200.;
+  position_difference_tmp.at(B2View::kTopView) = 300.;
 
   for (int icluster = 0; icluster < ntbm_in->GetNumberOfNinjaClusters(); icluster++) {
     std::vector<int> number_of_hits = ntbm_in->GetNumberOfHits(icluster);
@@ -395,8 +404,8 @@ void MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTB
   
   }
 
-  if (position_difference_tmp.at(0) >= 200. ||
-      position_difference_tmp.at(1) >= 200.) return;
+  if (std::fabs(position_difference_tmp.at(0)) >= 200. ||
+      std::fabs(position_difference_tmp.at(1)) >= 300.) return;
 
   // Create a new 2d cluster and add it
   std::vector<int> number_of_hits(2);
@@ -525,15 +534,19 @@ void ReconstructNinjaTangent(NTBMSummary* ntbmsummary) {
     baby_mind_position.at(B2View::kTopView) = baby_mind_position.at(B2View::kTopView)
       + BABYMIND_POS_X
       - NINJA_POS_X
-      - NINJA_TRACKER_POS_X;
+      - NINJA_TRACKER_POS_X + 22.;
     baby_mind_position.at(B2View::kSideView) = baby_mind_position.at(B2View::kSideView)
       + BABYMIND_POS_Y
       - NINJA_POS_Y
-      - NINJA_TRACKER_POS_Y;
+      - NINJA_TRACKER_POS_Y + 6.;
     std::vector<double> ninja_position_tmp = ntbmsummary->GetNinjaPosition(icluster);
     for (int iview = 0; iview < 2; iview++) {
-      tangent.at(iview) = (baby_mind_position.at(iview) - ninja_position_tmp.at(iview))
-	/ NINJA_BABYMIND_DISTANCE[iview];
+      if (iview == B2View::kSideView)
+	tangent.at(iview) = (baby_mind_position.at(iview) - ninja_position_tmp.at(iview))
+	  / (BABYMIND_POS_Z + BM_FIRST_LAYER_POS - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10. - 143.);
+      else if (iview == B2View::kTopView)
+	tangent.at(iview) = (baby_mind_position.at(iview) - ninja_position_tmp.at(iview))
+	  / (BABYMIND_POS_Z + BM_SECOND_LAYER_POS - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10. - 143.);
     }
     ntbmsummary->SetNinjaTangent(icluster, tangent);
   }
@@ -698,7 +711,7 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
 	ntbm_summary->SetBabyMindPosition(itrack, view,
 					  GetBabyMindInitialPosition(track, view, tmp, 0, false).at(0));
       }
-      ntbm_summary->SetBabyMindTangent(itrack, GetBabyMindInitialDirection(track, tmp, 0, false));
+      ntbm_summary->SetBabyMindTangent(itrack, GetBabyMindInitialDirection(track, tmp, 0, true));
       itrack++;
     }
   } 

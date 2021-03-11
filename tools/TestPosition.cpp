@@ -73,15 +73,15 @@ int main (int argc, char *argv[]) {
 
   logging::core::get()->set_filter
     (
-     //logging::trivial::severity >= logging::trivial::info
-     logging::trivial::severity >= logging::trivial::debug
+     logging::trivial::severity >= logging::trivial::info
+     //logging::trivial::severity >= logging::trivial::debug
      );
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Tracker Check Start==========";
   
-  if (argc != 3) {
+  if (argc != 4) {
     BOOST_LOG_TRIVIAL(error) << "Usage : " << argv[0]
-			     << "<input NTBM file path> <output file path>";
+			     << " <input NTBM file path> <output file path> <0 (MC)/1(Physics data)>";
     std::exit(1);
   }
   
@@ -100,14 +100,19 @@ int main (int argc, char *argv[]) {
     TH2D *hist_pos_xy = new TH2D("hist_pos_xy", "NINJA Tracker reconstructed position;X [mm];Y [mm]",
 				100, -650, 650, 100, -650, 650);
 
+    Int_t datatype = atoi(argv[3]);
+
     for (int ientry = 0; ientry < tree->GetEntries(); ientry++) {
       tree->GetEntry(ientry);
-#ifdef MC
-      double weight = weightcalculator(B2Detector::kWall, B2Material::kWater,
-				       ntbm->GetNormalization(), ntbm->GetTotalCrossSection());
-#else
       double weight = 1.;
-#endif
+      if (datatype == 0)
+	double weight = weightcalculator(B2Detector::kWall, B2Material::kWater,
+					 ntbm->GetNormalization(), ntbm->GetTotalCrossSection());
+      else if (datatype == 1)
+	double weight = 1.;
+      else 
+	throw std::invalid_argument("Datatype should be 0 (MC) or 1 (Physics data)!!");
+
       for (int icluster = 0; icluster < ntbm->GetNumberOfNinjaClusters(); icluster++) {
 	// Only 2d matched cluster
 	if (ntbm->GetNumberOfHits(icluster, B2View::kSideView) == 0 ||

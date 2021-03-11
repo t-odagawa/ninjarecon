@@ -79,9 +79,9 @@ int main (int argc, char *argv[]) {
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Tracker Check Start==========";
   
-  if (argc != 3) {
+  if (argc != 4) {
     BOOST_LOG_TRIVIAL(error) << "Usage : " << argv[0]
-			     << "<input NTBM file path> <output file path>";
+			     << " <input NTBM file path> <output file path> <0 (MC)/1(Physics data)>";
     std::exit(1);
   }
   
@@ -100,14 +100,19 @@ int main (int argc, char *argv[]) {
     TH1D *hist_ang_y =  new TH1D("hist_ang_y", "tan Y difference;#Deltatan_Y;Entries", 100, -0.25, 0.25);
     TH1D *hist_ang_x =  new TH1D("hist_ang_x", "tan X difference;#Deltatan_X;Entries", 100, -0.25, 0.25);
 
+    Int_t datatype = atoi(argv[3]);
+
     for (int ientry = 0; ientry < tree->GetEntries(); ientry++) {
       tree->GetEntry(ientry);
-#ifdef MC
-      double weight = weightcalculator(B2Detector::kWall, B2Material::kWater,
-				       ntbm->GetNormalization(), ntbm->GetTotalCrossSection());
-#else
       double weight = 1.;
-#endif
+      if (datatype == 0)
+	double weight = weightcalculator(B2Detector::kWall, B2Material::kWater,
+					 ntbm->GetNormalization(), ntbm->GetTotalCrossSection());
+      else if (datatype == 1)
+	double weight = 1.;
+      else 
+	throw std::invalid_argument("Datatype should be 0 (MC) or 1 (Physics data)!!");
+
       for (int icluster = 0; icluster < ntbm->GetNumberOfNinjaClusters(); icluster++) {
 	// Only 2d matched cluster
 	if (ntbm->GetNumberOfHits(icluster, B2View::kSideView) == 0 ||
@@ -119,20 +124,24 @@ int main (int argc, char *argv[]) {
 	std::vector<double> baby_mind_tangent = ntbm->GetBabyMindTangent(baby_mind_track_id);
 	std::vector<double> hit_expected_position(2);
 	for (int view = 0; view < 2; view++) {
-	  hit_expected_position.at(view) = baby_mind_position.at(view)
-	    - baby_mind_tangent.at(view) * NINJA_BABYMIND_DISTANCE[view];
 	  switch (view) {
 	  case B2View::kTopView :
+	  hit_expected_position.at(view) = baby_mind_position.at(view)
+	    - baby_mind_tangent.at(view) * (BABYMIND_POS_Z + BM_SECOND_LAYER_POS
+					    - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10. - 215.);
 	    hit_expected_position.at(view) = hit_expected_position.at(view)
 	      + BABYMIND_POS_X // global coordinate
 	      - NINJA_POS_X // NINJA overall
-	      - NINJA_TRACKER_POS_X; // NINJA tracker
+	      - NINJA_TRACKER_POS_X + 15.; // NINJA tracker
 	    break;
 	  case B2View::kSideView :
+	  hit_expected_position.at(view) = baby_mind_position.at(view)
+	    - baby_mind_tangent.at(view) * (BABYMIND_POS_Z + BM_FIRST_LAYER_POS
+					    - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10. - 215.);
 	    hit_expected_position.at(view) = hit_expected_position.at(view)
 	      + BABYMIND_POS_Y // global coordinate
 	      - NINJA_POS_Y // NINJA overall
-	      - NINJA_TRACKER_POS_Y; // NINJA tracker
+	      - NINJA_TRACKER_POS_Y + 21.; // NINJA tracker
 	    break;
 	  }
 	}
