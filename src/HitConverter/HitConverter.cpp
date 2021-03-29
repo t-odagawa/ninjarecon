@@ -55,13 +55,15 @@ void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
 			  Int_t view[NUM_SLOTS], Int_t pln[NUM_SLOTS], Int_t ch[NUM_SLOTS]) {
 
   for (int slot = 0; slot < NUM_SLOTS; slot++) {
-    //if (pe[slot] < 2.5 || lt[NUM_SLOTS] - tt[NUM_SLOTS] < 0) continue; // cut condition TODO
-    if (pe[slot] < 2.5) continue;
+    if (slot == 50 || slot == 115) continue; // unused slot number
+    if (pe[slot] < 2.5 || 
+	lt[slot] - tt[slot] < 0 || 
+	lt[slot] - tt[slot] > 200) continue;
     auto &output_hit_summary = output_spill_summary.AddHit();
     output_hit_summary.SetDetector(B2Detector::kNinja);
     output_hit_summary.SetPlaneGrid(B2GridPlane::kPlaneScintillator);
     output_hit_summary.SetPlane(pln[slot]);
-    output_hit_summary.SetTrueTimeNs(lt[slot]-tt[slot]); // Time over Threshold stored
+    output_hit_summary.SetTrueTimeNs(lt[slot]);
 
     B2View ninja_view = (view[slot] == B2View::kTopView) ?
       B2View::kTopView : B2View::kSideView;
@@ -79,7 +81,7 @@ void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
     for (const auto &readout : readouts) {
       output_hit_summary.SetSlot(readout, ch[slot]);
       output_hit_summary.SetHighGainPeu(readout, pe[slot]);
-      output_hit_summary.SetTimeNs(readout, lt[slot]);
+      output_hit_summary.SetTimeNs(readout, lt[slot]-tt[slot]); // Time over Threshold stored
     } 
   }
   

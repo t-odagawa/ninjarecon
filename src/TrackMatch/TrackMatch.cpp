@@ -691,6 +691,16 @@ void TransferBeamInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_sum
   ntbm_summary->SetWagasciGoodSpillFlag(beam_summary.GetWagasciGoodSpillFlag());
 }
 
+int MyGetBunch(const B2TrackSummary *track) {
+  auto it_cluster = track->BeginCluster();
+  while (const auto *cluster = it_cluster.Next()) {
+    auto it_hit = cluster->BeginHit();
+    while (const auto *hit = it_hit.Next()) {
+      if (hit->GetDetectorId() == B2Detector::kBabyMind) return hit->GetBunch();
+    }
+  }
+}
+
 void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summary) {
 
   auto it_track = spill_summary.BeginReconTrack();
@@ -705,7 +715,7 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
 	ntbm_summary->SetTrackType(itrack, 0);
       }
 
-      ntbm_summary->SetBunch(itrack, track->GetBunch());
+      ntbm_summary->SetBunch(itrack, MyGetBunch(track));
       ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
       ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
       for (int view = 0; view < 2; view++) {

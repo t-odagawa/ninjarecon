@@ -207,6 +207,14 @@ void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm
 void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary);
 
 /**
+ * Original function instead of B2HitsSet::GetBunch() as reconstructed track summary
+ * does not have bunch information on its own
+ * @param track reconstructed B2TrackSummary object
+ * @return bunch
+ */
+int MyGetBunch(const B2TrackSummary *track);
+
+/**
  * Transfer Baby MIND track info from B2TrackSummary to NTBMSummary
  * @param spill_summary B2SpillSummary object
  * @param ntbm_summary NTBMSummary object
