@@ -38,7 +38,15 @@ static const double BM_SECOND_LAYER_POS = -1720.5; // mm
 
 ///> Photoelectron threshold for the NINJA tracker
 static const double PE_THRESHOLD = 2.5;
-///> Time over threshold threshold for the NINJA tracker
-static const double TOT_THRESHOLD = 0.;
+///> Time over threshold lower limit for the NINJA tracker
+static const double TOT_MIN = 0.; // ns
+///> Time over threshold upper limit for the NINJA tracker
+static const double TOT_MAX = 200.; // ns
+///> Leadtime peak values for the NINJA tracker for Physics run a-1
+static const double LEADTIME_PEAK_2019[6] = {3500., 2916., 2333., 1750., 1168., 588.}; // ns
+///> Leadtime peak values for the NINJA tracker for Physics run a-2
+static const double LEADTIME_PEAK_2020[6] = {3503., 2924., 2345., 1765., 1182., 602.}; // ns
+///> Leadtime 3sigma
+static const double LEADTIME_HALF_WIDTH = 130.; // ns
 
 #endif

@@ -8,6 +8,7 @@ target_link_libraries(HitConverter
 	${Geant4_LIBRARIES}
 	${Boost_LIBRARIES}
 	${B2MC_LIBRARY}
+	libNTBM
 )
 
 # install the execute in the bin folder

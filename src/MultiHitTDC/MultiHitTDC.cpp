@@ -67,7 +67,7 @@ int main (int argc, char *argv[]) {
     gPad->SetLogy();
 
     TSpectrum *s = new TSpectrum(8);
-    s->Search(h_lt);
+    s->Search(h_lt, 5);
     Double_t *xpeaks = s->GetPositionX();
     const Int_t npeaks = s->GetNPeaks();
     std::sort(xpeaks, xpeaks + npeaks);
@@ -90,6 +90,14 @@ int main (int argc, char *argv[]) {
     c->Print(canvasname, "pdf");
     c->Print(canvasname + "]", "pdf");
 
+    BOOST_LOG_TRIVIAL(info) << "Bunch leadtime : ( "
+			    << fitfunc->GetParameter(1)  << ", "
+			    << fitfunc->GetParameter(4)  << ", "
+			    << fitfunc->GetParameter(7)  << ", "
+			    << fitfunc->GetParameter(10) << ", "
+			    << fitfunc->GetParameter(13) << ", "
+			    << fitfunc->GetParameter(16) << " )";
+
     BOOST_LOG_TRIVIAL(info) << "Bunch difference : ( "
 			    << fitfunc->GetParameter(4)  - fitfunc->GetParameter(1)  << ", " 
 			    << fitfunc->GetParameter(7)  - fitfunc->GetParameter(4)  << ", "
@@ -97,7 +105,7 @@ int main (int argc, char *argv[]) {
 			    << fitfunc->GetParameter(13) - fitfunc->GetParameter(10) << ", "
 			    << fitfunc->GetParameter(16) - fitfunc->GetParameter(13) << " )";
      
-    BOOST_LOG_TRIVIAL(info) << "Bunch width : (" 
+    BOOST_LOG_TRIVIAL(info) << "Bunch width : ( " 
 			    << 3 * fitfunc->GetParameter(2)  << ", "
 			    << 3 * fitfunc->GetParameter(5)  << ", "
 			    << 3 * fitfunc->GetParameter(8)  << ", "

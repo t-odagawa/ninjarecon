@@ -6,17 +6,22 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
+// root includes
+#include <TFile.h>
+#include <TTree.h>
+
 // B2 includes
 #include "B2Reader.hh"
 #include "B2Writer.hh"
 #include "B2Dimension.hh"
 #include "B2Measurement.hh"
 #include "B2HitSummary.hh"
+#include "B2SpillSummary.hh"
+
+#include "NTBMConst.hh"
 
 namespace logging = boost::log;
 
-///> number of slots used in the NINJA tracker
-const Int_t NUM_SLOTS = 250;
 
 /**
  * Get corresponding NINJA spill number (entry number in the NINJA tracker root file)
@@ -27,7 +32,7 @@ const Int_t NUM_SLOTS = 250;
  * @return corresponding entry number in the root file
  */
 Int_t GetNinjaSpill(const B2SpillSummary &output_spill_summary, TTree *tree, Int_t start,
-		    UInt_t ut[NUM_SLOTS]) {
+		    UInt_t ut[NUMBER_OF_SLOTS_IN_TRACKER]) {
 
   const Double_t wagasci_time = output_spill_summary.GetBeamSummary().GetTimestamp();
 
@@ -48,18 +53,39 @@ Int_t GetNinjaSpill(const B2SpillSummary &output_spill_summary, TTree *tree, Int
 /**
  * Add NINJA tracker data as B2SpillSummary
  * @param output_spill_summary WAGASCI/BabyMIND spill summary where the hits added
- * @param array[NUM_SLOTS] NINJA tracker raw data
+ * @param array[NUMBER_OF_SLOTS_IN_TRACKER] NINJA tracker raw data
  */
 void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
-			  Int_t lt[NUM_SLOTS], Int_t tt[NUM_SLOTS], Float_t pe[NUM_SLOTS],
-			  Int_t view[NUM_SLOTS], Int_t pln[NUM_SLOTS], Int_t ch[NUM_SLOTS]) {
+			  Int_t lt[NUMBER_OF_SLOTS_IN_TRACKER], Int_t tt[NUMBER_OF_SLOTS_IN_TRACKER], Float_t pe[NUMBER_OF_SLOTS_IN_TRACKER],
+			  Int_t view[NUMBER_OF_SLOTS_IN_TRACKER], Int_t pln[NUMBER_OF_SLOTS_IN_TRACKER], Int_t ch[NUMBER_OF_SLOTS_IN_TRACKER],
+			  Int_t subrunid) {
 
-  for (int slot = 0; slot < NUM_SLOTS; slot++) {
+  for (int slot = 0; slot < NUMBER_OF_SLOTS_IN_TRACKER; slot++) {
     if (slot == 50 || slot == 115) continue; // unused slot number
-    if (pe[slot] < 2.5 || 
-	lt[slot] - tt[slot] < 0 || 
-	lt[slot] - tt[slot] > 200) continue;
+    bool is_first_hit = false;
+    bool is_after_hit = false;
+    int bunch_difference = 0;
+
+    if (pe[slot] > 2.5) is_first_hit = true;
+    else {
+      for (int i_bunch_difference = 1; i_bunch_difference <= 6; i_bunch_difference++) {
+	if ( ( ( subrunid == 0 &&
+		 std::fabs(lt[slot] - LEADTIME_PEAK_2019[i_bunch_difference - 1]) < LEADTIME_HALF_WIDTH ) ||
+	       ( subrunid == 1 &&
+		 std::fabs(lt[slot] - LEADTIME_PEAK_2020[i_bunch_difference - 1]) < LEADTIME_HALF_WIDTH ) ) &&
+	     lt[slot] - tt[slot] > TOT_MIN &&
+	     lt[slot] - tt[slot] < TOT_MAX ) {
+	  is_after_hit = true;
+	  bunch_difference = i_bunch_difference;
+	  break;
+	}
+      }
+    }
+
+    if ( !is_first_hit && !is_after_hit ) continue;
+    
     auto &output_hit_summary = output_spill_summary.AddHit();
+    output_hit_summary.SetBunch(bunch_difference); // not bunch but bunch difference from the first hits.
     output_hit_summary.SetDetector(B2Detector::kNinja);
     output_hit_summary.SetPlaneGrid(B2GridPlane::kPlaneScintillator);
     output_hit_summary.SetPlane(pln[slot]);
@@ -97,9 +123,9 @@ int main(int argc, char *argv[]) {
   
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Hit Converter Start==========";
 
-  if (argc != 4) {
+  if (argc != 5) {
     BOOST_LOG_TRIVIAL(error) << "Usage : "<< argv[0]
-			     << " <input wagasci file path> <input ninja file path> <output file path>";
+			     << " <input wagasci file path> <input ninja file path> <output file path> <subrun 0(2019)/1(2020)>";
     std::exit(1);
   }
 
@@ -107,19 +133,21 @@ int main(int argc, char *argv[]) {
     B2Reader reader(argv[1]);
     TFile *ntfile = new TFile(argv[2], "read");
     B2Writer writer(argv[3], reader);
+    Int_t subrunid = atoi(argv[4]);
     BOOST_LOG_TRIVIAL(info) << "-----Settings Summary-----";
     BOOST_LOG_TRIVIAL(info) << "Reader  file : " << argv[1];
     BOOST_LOG_TRIVIAL(info) << "Tracker file : " << argv[2];
     BOOST_LOG_TRIVIAL(info) << "Writer  file : " << argv[3];
+    BOOST_LOG_TRIVIAL(info) << "Subrun id    : " << argv[4];
 
     // Tracker file settings
     BOOST_LOG_TRIVIAL(info) << "Tracker file tree setting...";
     TTree *nttree = (TTree*)ntfile->Get("tree");
 
-    Int_t adc[NUM_SLOTS], tt[NUM_SLOTS], lt[NUM_SLOTS];
-    UInt_t unixtime[NUM_SLOTS];
-    Float_t pe[NUM_SLOTS];
-    Int_t view[NUM_SLOTS], pln[NUM_SLOTS], ch[NUM_SLOTS];
+    Int_t adc[NUMBER_OF_SLOTS_IN_TRACKER], tt[NUMBER_OF_SLOTS_IN_TRACKER], lt[NUMBER_OF_SLOTS_IN_TRACKER];
+    UInt_t unixtime[NUMBER_OF_SLOTS_IN_TRACKER];
+    Float_t pe[NUMBER_OF_SLOTS_IN_TRACKER];
+    Int_t view[NUMBER_OF_SLOTS_IN_TRACKER], pln[NUMBER_OF_SLOTS_IN_TRACKER], ch[NUMBER_OF_SLOTS_IN_TRACKER];
     
     nttree->SetBranchAddress("ADC", adc);
     nttree->SetBranchAddress("LEADTIME", lt);
@@ -145,7 +173,7 @@ int main(int argc, char *argv[]) {
       if (ntentry_tmp > 0) {
 	nttree->GetEntry(ntentry_tmp);
 	ntentry = ntentry_tmp + 1;
-	AddNinjaAsHitSummary(output_spill_summary, lt, tt, pe, view, pln, ch);
+	AddNinjaAsHitSummary(output_spill_summary, lt, tt, pe, view, pln, ch, subrunid);
       }
       writer.Fill();
       
