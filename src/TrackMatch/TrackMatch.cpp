@@ -16,19 +16,19 @@
 #include <TCanvas.h>
 
 // B2 includes
-#include "B2Reader.hh"
-#include "B2Writer.hh"
-#include "B2Enum.hh"
-#include "B2Dimension.hh"
-#include "B2SpillSummary.hh"
-#include "B2BeamSummary.hh"
-#include "B2HitSummary.hh"
-#include "B2VertexSummary.hh"
-#include "B2ClusterSummary.hh"
-#include "B2TrackSummary.hh"
-#include "B2EventSummary.hh"
-#include "B2EmulsionSummary.hh"
-#include "B2Pdg.hh"
+#include <B2Reader.hh>
+#include <B2Writer.hh>
+#include <B2Enum.hh>
+#include <B2Dimension.hh>
+#include <B2SpillSummary.hh>
+#include <B2BeamSummary.hh>
+#include <B2HitSummary.hh>
+#include <B2VertexSummary.hh>
+#include <B2ClusterSummary.hh>
+#include <B2TrackSummary.hh>
+#include <B2EventSummary.hh>
+#include <B2EmulsionSummary.hh>
+#include <B2Pdg.hh>
 #include "NTBMSummary.hh"
 
 #include "TrackMatch.hpp"
@@ -36,6 +36,7 @@
 namespace logging = boost::log;
 
 bool CompareNinjaHits(const B2HitSummary* lhs, const B2HitSummary* rhs) {
+  if (lhs->GetBunch()!=rhs->GetBunch()) return lhs->GetBunch() < rhs->GetBunch();
   if (lhs->GetView()!=rhs->GetView()) return lhs->GetView() < rhs->GetView();
   switch (lhs->GetView()) {
   case B2View::kSideView :
@@ -57,6 +58,7 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
   int view_tmp = -1;
   
   int number_of_ninja_clusters = 0;
+
   std::vector<int> number_of_hits_tmp(2, 0);
   std::vector<std::vector<int>> number_of_hits = {};
   std::vector<std::vector<int>> plane_tmp, slot_tmp;
@@ -65,6 +67,7 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
   pe_tmp.resize(2);
   std::vector<std::vector<std::vector<int>>> plane = {}, slot = {};
   std::vector<std::vector<std::vector<double>>> pe = {};
+  std::vector<int> bunch_difference = {};
 
   for (int ihit = 0; ihit < ninja_hits.size(); ihit++) {
     const auto ninja_hit = ninja_hits.at(ihit);
@@ -75,10 +78,12 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
       ninja_hit_position = ninja_hit->GetScintillatorPosition().GetValue().X();
 
     int view_next = -1;
+    int bunch_difference_next = -1;
     double ninja_hit_next_position = 0.;
     if (ihit != ninja_hits.size() - 1) {
       const auto ninja_hit_next = ninja_hits.at(ihit + 1);
       view_next = ninja_hit_next->GetView();
+      bunch_difference_next = ninja_hit_next->GetBunch();
       if (ninja_hit_next->GetView() == B2View::kSideView)
 	ninja_hit_next_position = ninja_hit_next->GetScintillatorPosition().GetValue().Y();
       else if (ninja_hit_next->GetView() == B2View::kTopView)
@@ -88,13 +93,17 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
     number_of_hits_tmp.at(ninja_hit->GetView())++;
     plane_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetPlane());
     slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()));
-    pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetSingleReadout()));
+    if (ninja_hit->GetBunch() == 0)
+      pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetSingleReadout()));
+    else 
+      pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetTimeNs().GetValue(ninja_hit->GetSingleReadout()));
     
-    // when scintillators have a gap, create a new NINJA cluster
+    // create a new NINJA cluster
     if ( ( ( ihit < ninja_hits.size() - 1 ) && 
-	   ( ninja_hit_next_position > ninja_hit_position + NINJA_TRACKER_SCI_WIDTH
-	     || view_next != ninja_hit->GetView() ) )
-	 || ( ihit == ninja_hits.size() - 1 ) ) {
+	   ( ninja_hit_next_position > ninja_hit_position + NINJA_TRACKER_SCI_WIDTH // when there is a gap
+	     || view_next != ninja_hit->GetView() // when view is changed
+	     || bunch_difference_next != ninja_hit->GetBunch() ) ) // when bunch difference is changed
+	 || ( ihit == ninja_hits.size() - 1 ) ) { // when it is the last hit
       number_of_ninja_clusters++;
       number_of_hits.push_back(number_of_hits_tmp); number_of_hits_tmp.assign(2,0);
       plane.push_back(plane_tmp);
@@ -103,6 +112,7 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
       slot_tmp.at(0) = {}; slot_tmp.at(1) = {};
       pe.push_back(pe_tmp);
       pe_tmp.at(0) = {}; pe_tmp.at(1) = {};
+      bunch_difference.push_back(ninja_hit->GetBunch());
     }
 
   }
@@ -116,6 +126,7 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
     ninja_clusters->SetPlane(icluster, plane.at(icluster));
     ninja_clusters->SetSlot(icluster, slot.at(icluster));
     ninja_clusters->SetPe(icluster, pe.at(icluster));
+    ninja_clusters->SetBunchDifference(icluster, bunch_difference.at(icluster));
     ninja_clusters->SetNinjaTangent(icluster, tangent);
   }
 
@@ -371,17 +382,19 @@ bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
   return true; // TODO
 }
 
-void MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTBMSummary* ntbm_in) {
+bool MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTBMSummary* ntbm_in, int &bunch_diff) {
 
   std::vector<double> hit_expected_position = CalculateExpectedPosition(track);
 
   std::vector<int> matched_cluster_tmp(2);
   std::vector<double> position_difference_tmp(2);
+  int bunch_difference_tmp = 7; // higher than the upper limit
   
   position_difference_tmp.at(B2View::kSideView) = 200.;
   position_difference_tmp.at(B2View::kTopView) = 300.;
 
   for (int icluster = 0; icluster < ntbm_in->GetNumberOfNinjaClusters(); icluster++) {
+    if (bunch_diff >= 0 && ntbm_in->GetBunchDifference(icluster) != bunch_diff) continue;
     std::vector<int> number_of_hits = ntbm_in->GetNumberOfHits(icluster);
 
     // Get view information from 1d NINJA cluster
@@ -397,15 +410,20 @@ void MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTB
     std::vector<double> ninja_tangent = ntbm_in->GetNinjaTangent(icluster);
 
     if (std::fabs(hit_expected_position.at(view) - ninja_position.at(view))
-	< std::fabs(position_difference_tmp.at(view))) {
+	< std::fabs(position_difference_tmp.at(view)) &&
+	ntbm_in->GetBunchDifference(icluster) <= bunch_difference_tmp) {
       matched_cluster_tmp.at(view) = icluster;
+      bunch_difference_tmp = ntbm_in->GetBunchDifference(icluster);
       position_difference_tmp.at(view) = hit_expected_position.at(view) - ninja_position.at(view);
     }
   
   }
 
   if (std::fabs(position_difference_tmp.at(0)) >= 200. ||
-      std::fabs(position_difference_tmp.at(1)) >= 300.) return;
+      std::fabs(position_difference_tmp.at(1)) >= 300.) return false;
+
+  // Bunch difference start value update
+  bunch_diff = bunch_difference_tmp;
 
   // Create a new 2d cluster and add it
   std::vector<int> number_of_hits(2);
@@ -429,12 +447,15 @@ void MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTB
     }
   }
 
+  ntbm_in->SetBunchDifference(new_cluster_id, bunch_diff);
   ntbm_in->SetNumberOfHits(new_cluster_id, number_of_hits);
   ntbm_in->SetNinjaPosition(new_cluster_id, ninja_position);
   ntbm_in->SetNinjaTangent(new_cluster_id, ninja_tangent);
   ntbm_in->SetPlane(new_cluster_id, plane);
   ntbm_in->SetSlot(new_cluster_id, slot);
   ntbm_in->SetPe(new_cluster_id, pe);
+
+  return true;
 
 }
 
@@ -777,9 +798,9 @@ int main(int argc, char *argv[]) {
       nspill++;
 
       auto &input_spill_summary = reader.GetSpillSummary();
-      int entry = input_spill_summary.GetBeamSummary().GetTimestamp();
+      int timestamp = input_spill_summary.GetBeamSummary().GetTimestamp();
       BOOST_LOG_TRIVIAL(debug) << "entry : " << nspill;
-      BOOST_LOG_TRIVIAL(debug) << "timestamp : " << entry;
+      BOOST_LOG_TRIVIAL(debug) << "timestamp : " << timestamp;
  
       TransferBeamInfo(input_spill_summary, my_ntbm);
       TransferMCInfo(input_spill_summary, my_ntbm);
@@ -801,12 +822,20 @@ int main(int argc, char *argv[]) {
       // Extrapolate BabyMIND tracks to the NINJA position
       // and get the best cluster to match each BabyMIND track
       int number_of_tracks = 0;
+      int start_bunch = 0; // Bunch has 1-8 value
+      int bunch_difference = -1;
       auto it_track = input_spill_summary.BeginReconTrack();
       while (const auto *track = it_track.Next()) {
 	if (MyHasDetector(track, B2Detector::kBabyMind)) {
 	  number_of_tracks++;
-	  if (NinjaHitExpected(track, c, entry)) {
-	    MatchBabyMindTrack(track, number_of_tracks-1, my_ntbm);
+	  if (start_bunch > 0)
+	    bunch_difference += MyGetBunch(track) - start_bunch;
+	  if (NinjaHitExpected(track, c, timestamp) &&
+	      bunch_difference < 7) { // Multi hit TDC range
+	    if (MatchBabyMindTrack(track, number_of_tracks-1, my_ntbm, bunch_difference)) {
+	      // If this is the first matching, set start_bunch
+	      if (start_bunch == 0) start_bunch = MyGetBunch(track);
+	    }
 	  }
 	}
       }

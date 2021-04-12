@@ -115,7 +115,7 @@ bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry);
  * @param baby_mind_track_id Baby MIND track id (incremented from 0 NINJA internally)
  * @param ntbm_in NTBMSummary object created in the CreateNinjaCluster function
  */
-void MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTBMSummary *ntbm_in);
+bool MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTBMSummary *ntbm_in, int &bunch_diff);
 
 /**
  * Get boolean if the value is in range [min, max]
@@ -227,4 +227,5 @@ void TransferBabyMindTrackInfo(const B2SpillSummary& spill_summary, NTBMSummary 
  * @param ntbmsummary NTBMSummary object
  */
 void TransferMCInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary);
+
 #endif
