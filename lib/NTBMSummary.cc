@@ -170,7 +170,7 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "Bunch difference from the first matched bunch = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << obj.bunch_difference_.at(i);
+    os << i + 1 << " : " << obj.bunch_difference_.at(i);
     if (i != obj.number_of_ninja_clusters_ - 1) os << ", ";
   }
   os << "\n"

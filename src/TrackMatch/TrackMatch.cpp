@@ -387,44 +387,55 @@ bool MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTB
   std::vector<double> hit_expected_position = CalculateExpectedPosition(track);
 
   std::vector<int> matched_cluster_tmp(2);
-  std::vector<double> position_difference_tmp(2);
-  int bunch_difference_tmp = 7; // higher than the upper limit
-  
-  position_difference_tmp.at(B2View::kSideView) = 200.;
-  position_difference_tmp.at(B2View::kTopView) = 300.;
+  bool is_match = false;
 
-  for (int icluster = 0; icluster < ntbm_in->GetNumberOfNinjaClusters(); icluster++) {
-    if (bunch_diff >= 0 && ntbm_in->GetBunchDifference(icluster) != bunch_diff) continue;
-    std::vector<int> number_of_hits = ntbm_in->GetNumberOfHits(icluster);
-
-    // Get view information from 1d NINJA cluster
-    int view = -1;
-    if (number_of_hits.at(B2View::kTopView) > 0) {
-      if (number_of_hits.at(B2View::kSideView) > 0) continue;
-      else view = B2View::kTopView;
-    } else if (number_of_hits.at(B2View::kSideView > 0))
-      view = B2View::kSideView;
-    else continue;
-
-    std::vector<double> ninja_position = ntbm_in->GetNinjaPosition(icluster);
-    std::vector<double> ninja_tangent = ntbm_in->GetNinjaTangent(icluster);
-
-    if (std::fabs(hit_expected_position.at(view) - ninja_position.at(view))
-	< std::fabs(position_difference_tmp.at(view)) &&
-	ntbm_in->GetBunchDifference(icluster) <= bunch_difference_tmp) {
-      matched_cluster_tmp.at(view) = icluster;
-      bunch_difference_tmp = ntbm_in->GetBunchDifference(icluster);
-      position_difference_tmp.at(view) = hit_expected_position.at(view) - ninja_position.at(view);
-    }
-  
+  // set bunch difference loop region
+  int start_bunch_difference = 0;
+  int end_bunch_difference = 7;
+  if (bunch_diff != -1) {
+    start_bunch_difference = bunch_diff;
+    end_bunch_difference = bunch_diff + 1;
   }
 
-  if (std::fabs(position_difference_tmp.at(0)) >= 200. ||
-      std::fabs(position_difference_tmp.at(1)) >= 300.) return false;
+  for (int ibunch_difference = start_bunch_difference; ibunch_difference < end_bunch_difference; ibunch_difference++) {
 
-  // Bunch difference start value update
-  bunch_diff = bunch_difference_tmp;
+    std::vector<double> position_difference_tmp(2);
+    position_difference_tmp.at(B2View::kSideView) = 200.;
+    position_difference_tmp.at(B2View::kTopView) = 300.;
 
+    for (int icluster = 0; icluster < ntbm_in->GetNumberOfNinjaClusters(); icluster++) {
+      if (ntbm_in->GetBunchDifference(icluster) != ibunch_difference) continue;
+      std::vector<int> number_of_hits = ntbm_in->GetNumberOfHits(icluster);
+      // Get view information from 1d NINJA cluster
+      int view = -1;
+      if (number_of_hits.at(B2View::kTopView) > 0) {
+	if (number_of_hits.at(B2View::kSideView) > 0) continue;
+	else view = B2View::kTopView;
+      } else if (number_of_hits.at(B2View::kSideView > 0))
+	view = B2View::kSideView;
+      else continue;
+
+      std::vector<double> ninja_position = ntbm_in->GetNinjaPosition(icluster);
+      std::vector<double> ninja_tangent = ntbm_in->GetNinjaTangent(icluster);
+      
+      if (std::fabs(hit_expected_position.at(view) - ninja_position.at(view))
+	  < std::fabs(position_difference_tmp.at(view))) {
+	matched_cluster_tmp.at(view) = icluster;
+	position_difference_tmp.at(view) = hit_expected_position.at(view) - ninja_position.at(view);
+	BOOST_LOG_TRIVIAL(debug) << "matched 1d cluster update : view : " << view << " cluster : " << icluster;
+      }
+    }
+
+    if (position_difference_tmp.at(B2View::kSideView) < 200. &&
+	position_difference_tmp.at(B2View::kTopView) < 300.) {
+      bunch_diff = ibunch_difference;
+      is_match = true;
+      break;
+    }
+    
+  }
+
+  if (!is_match) return false;
   // Create a new 2d cluster and add it
   std::vector<int> number_of_hits(2);
   std::vector<std::vector<int>> plane(2);
@@ -766,8 +777,8 @@ int main(int argc, char *argv[]) {
 
   logging::core::get()->set_filter
     (
-     logging::trivial::severity >= logging::trivial::info
-     //logging::trivial::severity >= logging::trivial::debug
+     //logging::trivial::severity >= logging::trivial::info
+     logging::trivial::severity >= logging::trivial::debug
      );
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Track Matching Start==========";
@@ -794,8 +805,8 @@ int main(int argc, char *argv[]) {
     int nspill = 0;
 
     while (reader.ReadNextSpill() > 0) {
-      //if (nspill > 1000) break;
       nspill++;
+      //if (nspill != 20062) continue;
 
       auto &input_spill_summary = reader.GetSpillSummary();
       int timestamp = input_spill_summary.GetBeamSummary().GetTimestamp();
@@ -822,23 +833,28 @@ int main(int argc, char *argv[]) {
       // Extrapolate BabyMIND tracks to the NINJA position
       // and get the best cluster to match each BabyMIND track
       int number_of_tracks = 0;
-      int start_bunch = 0; // Bunch has 1-8 value
-      int bunch_difference = -1;
+      int start_bunch = 0; // bunch id (1-8) corresponds to NINJA tracker ADC triggered timing
+      int bunch_difference = -1; // difference between the bunch in interest and the start_bunch
       auto it_track = input_spill_summary.BeginReconTrack();
       while (const auto *track = it_track.Next()) {
 	if (MyHasDetector(track, B2Detector::kBabyMind)) {
 	  number_of_tracks++;
 	  if (start_bunch > 0)
-	    bunch_difference += MyGetBunch(track) - start_bunch;
+	    bunch_difference = MyGetBunch(track) - start_bunch;
 	  if (NinjaHitExpected(track, c, timestamp) &&
 	      bunch_difference < 7) { // Multi hit TDC range
 	    if (MatchBabyMindTrack(track, number_of_tracks-1, my_ntbm, bunch_difference)) {
 	      // If this is the first matching, set start_bunch
-	      if (start_bunch == 0) start_bunch = MyGetBunch(track);
+	      if (start_bunch == 0) {
+		start_bunch = MyGetBunch(track) - bunch_difference;
+		BOOST_LOG_TRIVIAL(debug) << "This is the first matching: "
+					 << "start bunch = " << start_bunch;
+	      }
 	    }
 	  }
 	}
       }
+
       my_ntbm->SetNumberOfTracks(number_of_tracks);
       if (number_of_tracks > 0) {
 	TransferBabyMindTrackInfo(input_spill_summary, my_ntbm);
