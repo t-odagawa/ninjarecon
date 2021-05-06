@@ -241,6 +241,56 @@ std::vector<double> GetBabyMindPlanePositionError(const B2TrackSummary *track, i
 
 }
 
+std::vector<double>FitBabyMind(const B2TrackSummary *track, TCanvas *c, int entry, bool draw, int view) {
+
+  std::vector<double> param(2);
+
+  std::vector<double> xy, z;
+  std::vector<double> xy_error, z_error;
+
+  for (int iplane = 0; iplane < BM_NUM_TRACKING_PLANES; iplane++) {
+    // Side view fitting is only done for the first three planes
+    if (view == B2View::kSideView && iplane > 2) break;
+    if (GetBabyMindPlaneHits(track, (B2View)view, iplane)) {
+      xy.push_back(GetBabyMindPlanePosition(track, (B2View)view, iplane).at(0));
+      z.push_back(GetBabyMindPlanePosition(track, (B2View)view, iplane).at(1));
+      xy_error.push_back(GetBabyMindPlanePositionError(track, (B2View)view, iplane).at(0));
+      z_error.push_back(GetBabyMindPlanePositionError(track, (B2View)view, iplane).at(1));
+    }
+  }
+
+  if (z.size() == 0) {
+    param.at(0) = 0.; param.at(1) = 0.;
+    return param;
+  }
+
+  TGraphErrors *ge = new TGraphErrors(z.size(), &z[0], &xy[0], &z_error[0], &xy_error[0]);
+
+#ifdef CANVAS
+  if (draw) {
+    ge->SetTitle(Form("Entry : %d", entry));
+    ge->Draw("AP");
+  }
+#endif
+
+  TF1 *linear = new TF1("linear", "[0] + [1] * x");
+  linear->SetParameter(0, xy.front());
+  linear->SetParameter(1, (xy.back() - xy.front()) / (z.back() - z.front()));
+
+  ge->Fit(linear, "Q", "", z.front() - 10., z.back() + 10.);
+  param.at(0) = linear->GetParameter(0);
+  param.at(1) = linear->GetParameter(1);
+
+#ifdef CANVAS
+  if (draw) c->Print("test.pdf", "pdf");
+#endif
+
+  delete linear;
+
+  return param;
+
+}
+
 std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, int entry, bool draw) {
 
   std::vector<double> param(2);
@@ -287,6 +337,19 @@ std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, 
   return param;
 
 }
+
+/*
+std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCanvas *c, int entry) {
+std::vector<double> initial_direction(2); // 0:Y, 1:X
+
+intial_direction(B2View::kSideView) = FitBabyMind(track, c, entry, false, B2View::kSideView);
+intial_direction(B2View::kTopView) = FitBabyMind(track, c, entry, false, B2View::kTopView);
+
+return initial_direction;
+
+}
+
+ */
 
 std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCanvas *c, int entry, bool draw) {
   std::vector<double> initial_direction(2); // 0:Y, 1:X
@@ -374,10 +437,19 @@ bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
        GetBabyMindPlaneHits(track, B2View::kTopView, 1) == 0))
     return false;
 
-  // Downstream WAGASCI interaction TODO
-  if (track->GetType() == B2TrackedParticle::kPrimaryTrack) {
-    if (false) return false;
-  }
+  /*
+  if ( (GetBabyMindPlaneHits(track, B2View::kSideView, 0) == 0 &&
+	GetBabyMindPlaneHits(track, B2View::kSideView, 1) == 0) ||
+       (GetBabyMindPlaneHits(track, B2View::kTopView, 0) == 0 &&
+	GetBabyMindPlaneHits(track, B2View::kTopView, 1) == 0) )
+    return false;
+  */ // after sideview angle pre-reconstruction updated, change conditions
+
+  // Downstream WAGASCI interaction
+  /* if (track->GetParentVertex().GetInsideFiducialVolume() &&
+      track->GetParentVertex().GetDetector() == B2Detector::kWagasciDownstream)
+    return false;
+  */
 
   return true; // TODO
 }
