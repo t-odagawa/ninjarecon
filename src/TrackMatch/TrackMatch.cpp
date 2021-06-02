@@ -730,6 +730,7 @@ int MyGetBunch(const B2TrackSummary *track) {
   }
 }
 
+
 int MyGetBabyMindMaximumPlane(const B2TrackSummary *track) {
 
   int return_max_plane = -1;
@@ -760,7 +761,7 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
 	ntbm_summary->SetTrackType(itrack, 0);
       }
 
-      ntbm_summary->SetBabyMindMaximumPlane(itrack, MyGetBabyMindMaximumPlane(track));
+      // ntbm_summary->SetBabyMindMaximumPlane(itrack, MyGetBabyMindMaximumPlane(track));
       ntbm_summary->SetBunch(itrack, MyGetBunch(track));
       ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
       ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
