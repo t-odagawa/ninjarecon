@@ -100,7 +100,7 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
     
     // create a new NINJA cluster
     if ( ( ( ihit < ninja_hits.size() - 1 ) && 
-	   ( ninja_hit_next_position > ninja_hit_position + NINJA_TRACKER_SCI_WIDTH // when there is a gap
+	   ( ninja_hit_next_position > ninja_hit_position + NINJA_SCI_WIDTH // when there is a gap
 	     || view_next != ninja_hit->GetView() // when view is changed
 	     || bunch_difference_next != ninja_hit->GetBunch() ) ) // when bunch difference is changed
 	 || ( ihit == ninja_hits.size() - 1 ) ) { // when it is the last hit
@@ -291,83 +291,14 @@ std::vector<double>FitBabyMind(const B2TrackSummary *track, TCanvas *c, int entr
 
 }
 
-std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, int entry, bool draw) {
 
-  std::vector<double> param(2);
-
-  std::vector<double> x, z;
-  std::vector<double> x_error, z_error;
-  for (int iplane = 0; iplane < BM_NUM_TRACKING_PLANES; iplane++) {
-    if (GetBabyMindPlaneHits(track, B2View::kTopView, iplane)) {
-      x.push_back(GetBabyMindPlanePosition(track, B2View::kTopView, iplane).at(0));
-      z.push_back(GetBabyMindPlanePosition(track, B2View::kTopView, iplane).at(1));
-      x_error.push_back(GetBabyMindPlanePositionError(track, B2View::kTopView, iplane).at(0));
-      z_error.push_back(GetBabyMindPlanePositionError(track, B2View::kTopView, iplane).at(1));
-    }
-  }
-
-  if (z.size() == 0) {
-    param.at(0) = 0.; param.at(1) = 0.;
-    return param;
-  }
-  TGraphErrors *ge = new TGraphErrors(z.size(), &z[0], &x[0], &z_error[0], &x_error[0]);
-
-#ifdef CANVAS
-  if (draw) {
-    ge->SetTitle(Form("Entry : %d", entry));
-    ge->Draw("AP");
-  }
-#endif
-
-  TF1 *linear = new TF1("linear", "[0] + [1] * x");
-  linear->SetParameter(0, x.front());
-  linear->SetParameter(1, (x.back() - x.front()) / (z.back() - z.front()));
-
-  ge->Fit(linear, "Q", "", z.front() - 10., z.back() + 10.);
-  param.at(0) = linear->GetParameter(0);
-  param.at(1) = linear->GetParameter(1);
-
-#ifdef CANVAS
-  if (draw)
-    c->Print((TString)"test.pdf", "pdf");
-#endif
-
-  delete linear;
-
-  return param;
-
-}
-
-/*
 std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCanvas *c, int entry) {
 std::vector<double> initial_direction(2); // 0:Y, 1:X
 
-intial_direction(B2View::kSideView) = FitBabyMind(track, c, entry, false, B2View::kSideView);
-intial_direction(B2View::kTopView) = FitBabyMind(track, c, entry, false, B2View::kTopView);
+ initial_direction.at(B2View::kSideView) = FitBabyMind(track, c, entry, false, B2View::kSideView).at(1);
+ initial_direction.at(B2View::kTopView) = FitBabyMind(track, c, entry, false, B2View::kTopView).at(1);
 
-return initial_direction;
-
-}
-
- */
-
-std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCanvas *c, int entry, bool draw) {
-  std::vector<double> initial_direction(2); // 0:Y, 1:X
-
-  // Vertical direction
-  if (GetBabyMindPlaneHits(track, B2View::kSideView, 0) > 0 &&
-      GetBabyMindPlaneHits(track, B2View::kSideView, 1) > 0)
-    initial_direction.at(B2View::kSideView) = (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(0) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(0))
-      //      / (GetBabyMindPlanePosition(track, B2View::kSideView, 1).at(1) - GetBabyMindPlanePosition(track, B2View::kSideView, 0).at(1));
-      / 254.5;
-  else 
-    initial_direction.at(B2View::kSideView) = 0.;
-
-  // Horizontal direction
-  std::vector<double> param = FitBabyMindTopView(track, c, entry, draw);
-  initial_direction.at(B2View::kTopView) = param.at(1);
-
-  return initial_direction;
+ return initial_direction;
 
 }
 
@@ -377,7 +308,7 @@ std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track, int 
   if (view == B2View::kSideView)
     initial_position = GetBabyMindPlanePosition(track, view, 0);
   else if (view == B2View::kTopView) {
-    std::vector<double> param = FitBabyMindTopView(track, c, entry, draw);
+    std::vector<double> param = FitBabyMind(track, c, entry, draw, view);
     initial_position.at(0) = param.at(0) + param.at(1) * BM_SECOND_LAYER_POS;
     initial_position.at(1) = BM_SECOND_LAYER_POS;
   }
@@ -391,16 +322,16 @@ std::vector<double> CalculateExpectedPosition(const B2TrackSummary *track) {
   TCanvas *tmp = new TCanvas();
 
   // Pre reconstructed position/direction in BM coordinate
-  std::vector<double> initial_direction =  GetBabyMindInitialDirection(track, tmp, 0, false);
+  std::vector<double> initial_direction =  GetBabyMindInitialDirection(track, tmp, 0);
   std::vector<double> initial_position_x = GetBabyMindInitialPosition(track, B2View::kTopView, tmp, 0, false);
   std::vector<double> initial_position_y = GetBabyMindInitialPosition(track, B2View::kSideView, tmp, 0, false);
 
   std::vector<double> position(2);
   double distance[2];
   distance[B2View::kTopView] = BABYMIND_POS_Z + BM_SECOND_LAYER_POS
-    - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10. - 143.;
+    - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10.;
   distance[B2View::kSideView] = BABYMIND_POS_Z + BM_FIRST_LAYER_POS
-    - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10. - 143.;
+    - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10.;
   position.at(B2View::kTopView)  = initial_position_x.at(0) - initial_direction.at(B2View::kTopView) * distance[B2View::kTopView];
   position.at(B2View::kSideView) = initial_position_y.at(0) - initial_direction.at(B2View::kSideView) * distance[B2View::kSideView];
 
@@ -432,18 +363,11 @@ bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
     return false;
 
   // Has hits in upstream planes
-  if (GetBabyMindPlaneHits(track, B2View::kSideView, 0) == 0 ||
-      (GetBabyMindPlaneHits(track, B2View::kTopView, 0) == 0 &&
-       GetBabyMindPlaneHits(track, B2View::kTopView, 1) == 0))
-    return false;
-
-  /*
   if ( (GetBabyMindPlaneHits(track, B2View::kSideView, 0) == 0 &&
 	GetBabyMindPlaneHits(track, B2View::kSideView, 1) == 0) ||
        (GetBabyMindPlaneHits(track, B2View::kTopView, 0) == 0 &&
 	GetBabyMindPlaneHits(track, B2View::kTopView, 1) == 0) )
     return false;
-  */ // after sideview angle pre-reconstruction updated, change conditions
 
   // Downstream WAGASCI interaction
   /* if (track->GetParentVertex().GetInsideFiducialVolume() &&
@@ -451,7 +375,7 @@ bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
     return false;
   */
 
-  return true; // TODO
+  return true;
 }
 
 bool MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTBMSummary* ntbm_in, int &bunch_diff) {
@@ -563,10 +487,10 @@ bool IsMakeHit(double min, double max, int view, int plane, int slot) {
     std::exit(1);
   }
 
-  return IsInRange(min, position_xy - NINJA_TRACKER_SCI_WIDTH / 2. - NINJA_TRACKER_GAP,
-		   position_xy + NINJA_TRACKER_SCI_WIDTH / 2.)
-    && IsInRange(max, position_xy - NINJA_TRACKER_SCI_WIDTH / 2.,
-		 position_xy + NINJA_TRACKER_SCI_WIDTH / 2. + NINJA_TRACKER_GAP);
+  return IsInRange(min, position_xy - NINJA_SCI_WIDTH / 2. - NINJA_TRACKER_GAP,
+		   position_xy + NINJA_SCI_WIDTH / 2.)
+    && IsInRange(max, position_xy - NINJA_SCI_WIDTH / 2.,
+		 position_xy + NINJA_SCI_WIDTH / 2. + NINJA_TRACKER_GAP);
 }
 
 bool IsInGap(double min, double max, int view, int plane, int slot) {
@@ -587,27 +511,27 @@ bool IsInGap(double min, double max, int view, int plane, int slot) {
 
   switch (slot) {
   case 0 :
-    return max <= position_xy - NINJA_TRACKER_SCI_WIDTH / 2.;
+    return max <= position_xy - NINJA_SCI_WIDTH / 2.;
   case NINJA_TRACKER_NUM_CHANNELS_ONE_PLANE - 1 :
-    return position_xy + NINJA_TRACKER_SCI_WIDTH / 2. <= min;
+    return position_xy + NINJA_SCI_WIDTH / 2. <= min;
   default : 
     return position_xy + NINJA_TRACKER_SCI_WIDTH / 2. <= min
-      && max <= position_xy - NINJA_TRACKER_SCI_WIDTH / 2.;
+      && max <= position_xy - NINJA_SCI_WIDTH / 2.;
   }
 }
 
 double GetTrackAreaMin(double pos, double tangent, int iplane, int jplane, int vertex) {
   if (tangent > 0) return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
-					   + NINJA_TRACKER_SCI_THICK * (0 - vertex % 2));
+					   + NINJA_SCI_THICK * (0 - vertex % 2));
   else return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
-			       + NINJA_TRACKER_SCI_THICK * (1 - vertex % 2));
+			       + NINJA_SCI_THICK * (1 - vertex % 2));
 }
 
 double GetTrackAreaMax(double pos, double tangent, int iplane, int jplane, int vertex) {
   if (tangent > 0) return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
-					   + NINJA_TRACKER_SCI_THICK * (1 - vertex % 2));
+					   + NINJA_SCI_THICK * (1 - vertex % 2));
   else return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
-			       + NINJA_TRACKER_SCI_THICK * (0 - vertex % 2));
+			       + NINJA_SCI_THICK * (0 - vertex % 2));
 }
 
 bool IsGoodTrack(bool *condition) {
@@ -647,10 +571,10 @@ void ReconstructNinjaTangent(NTBMSummary* ntbmsummary) {
     for (int iview = 0; iview < 2; iview++) {
       if (iview == B2View::kSideView)
 	tangent.at(iview) = (baby_mind_position.at(iview) - ninja_position_tmp.at(iview))
-	  / (BABYMIND_POS_Z + BM_FIRST_LAYER_POS - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10. - 143.);
+	  / (BABYMIND_POS_Z + BM_FIRST_LAYER_POS - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10.);
       else if (iview == B2View::kTopView)
 	tangent.at(iview) = (baby_mind_position.at(iview) - ninja_position_tmp.at(iview))
-	  / (BABYMIND_POS_Z + BM_SECOND_LAYER_POS - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10. - 143.);
+	  / (BABYMIND_POS_Z + BM_SECOND_LAYER_POS - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10.);
     }
     ntbmsummary->SetNinjaTangent(icluster, tangent);
   }
@@ -687,11 +611,11 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 	    switch (iview) {
 	    case B2View::kTopView :
 	      start_of_track_xy = start_of_track.X()
-		+ NINJA_TRACKER_SCI_WIDTH / 2. * ( -1 + 2 * (ivertex/2) );
+		+ NINJA_SCI_WIDTH / 2. * ( -1 + 2 * (ivertex/2) );
 	      break;
 	    case B2View::kSideView :
 	      start_of_track_xy = start_of_track.Y()
-		+ NINJA_TRACKER_SCI_WIDTH / 2. * ( -1 + 2 * (ivertex/2) );
+		+ NINJA_SCI_WIDTH / 2. * ( -1 + 2 * (ivertex/2) );
 	      break;
 	    }
 
@@ -723,7 +647,7 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
 	    if (IsGoodTrack(plane_condition)) {
 	      BOOST_LOG_TRIVIAL(debug) << "Is Good Track";
 	      position_list.at(iview).push_back(start_of_track_xy + tangent.at(iview)
-						* (- NINJA_TRACKER_SCI_THICK * (ivertex % 2) - NINJA_TRACKER_OFFSET_Z[iplane] + NINJA_TRACKER_OFFSET_Z[2]));
+						* (- NINJA_SCI_THICK * (ivertex % 2) - NINJA_TRACKER_OFFSET_Z[iplane] + NINJA_TRACKER_OFFSET_Z[2]));
 	    }
 	  } // ivertex
 	} // islot
@@ -756,9 +680,10 @@ void ReconstructNinjaPosition(NTBMSummary* ntbmsummary) {
       } // fi
     } // iview
     
+    /*    
     position.at(B2View::kSideView) -= NINJA_SCI_DIFF;    
     position.at(B2View::kTopView) += NINJA_SCI_DIFF;
-    
+    */
     ntbmsummary->SetNinjaPosition(icluster, position);
   } // icluster
   
@@ -805,6 +730,22 @@ int MyGetBunch(const B2TrackSummary *track) {
   }
 }
 
+int MyGetBabyMindMaximumPlane(const B2TrackSummary *track) {
+
+  int return_max_plane = -1;
+
+  auto it_cluster = track->BeginCluster();
+  while (const auto *cluster = it_cluster.Next()) {
+    auto it_hit = cluster->BeginHit();
+    while (const auto *hit = it_hit.Next()) {
+      if (hit->GetPlane() > return_max_plane) return_max_plane = hit->GetPlane();
+    }
+  }
+
+  return return_max_plane;
+
+}
+
 void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summary) {
 
   auto it_track = spill_summary.BeginReconTrack();
@@ -819,6 +760,7 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
 	ntbm_summary->SetTrackType(itrack, 0);
       }
 
+      ntbm_summary->SetBabyMindMaximumPlane(itrack, MyGetBabyMindMaximumPlane(track));
       ntbm_summary->SetBunch(itrack, MyGetBunch(track));
       ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
       ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
@@ -826,7 +768,7 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
 	ntbm_summary->SetBabyMindPosition(itrack, view,
 					  GetBabyMindInitialPosition(track, view, tmp, 0, false).at(0));
       }
-      ntbm_summary->SetBabyMindTangent(itrack, GetBabyMindInitialDirection(track, tmp, 0, true));
+      ntbm_summary->SetBabyMindTangent(itrack, GetBabyMindInitialDirection(track, tmp, 0));
       itrack++;
     }
   } 

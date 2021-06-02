@@ -120,6 +120,10 @@ public :
 
   double GetBabyMindTangentError(int track, int view) const;
 
+  void SetBabyMindMaximumPlane(int track, int baby_mind_maximum_plane);
+
+  int GetBabyMindMaximumPlane(int track) const;
+
   void SetCharge(int track, int charge);
 
   int GetCharge(int track) const;
@@ -299,6 +303,8 @@ private :
   std::vector<std::vector<double>> baby_mind_tangent_;
   ///> Baby MIND reconstructed tangent error
   std::vector<std::vector<double>> baby_mind_tangent_error_;
+  ///> Baby MIND maximum plane
+  std::vector<int> baby_mind_maximum_plane_;
   ///> Baby MIND reconstructed charge (assuming muon +/-)
   std::vector<int> charge_;
   ///> Baby MIND reconstructed track direction (+/-)
@@ -344,7 +350,7 @@ private :
   ///> True tangent
   std::vector<std::vector<std::vector<double>>> true_tangent_;
 
-  ClassDefOverride(NTBMSummary, 7) // NT BM Summary
+  ClassDefOverride(NTBMSummary, 8) // NT BM Summary
 };
 
 #endif

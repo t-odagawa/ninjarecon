@@ -21,6 +21,7 @@ void NTBMSummary::Clear(Option_t *option) {
   momentum_.clear();
   baby_mind_position_.clear();
   baby_mind_tangent_.clear();
+  baby_mind_maximum_plane_.clear();
   charge_.clear();
   direction_.clear();
   bunch_.clear();
@@ -90,6 +91,12 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
        << obj.baby_mind_tangent_.at(i).at(1) << " +/- "
        << obj.baby_mind_tangent_error_.at(i).at(1) <<" )\n";
   }
+  os << "\n"
+     << "Baby MIND maximum plane = ";
+  for (int i = 0; i < obj.number_of_tracks_; i++) {
+    os << i + 1 << " : " << obj.baby_mind_maximum_plane_.at(i);
+    if(i != obj.number_of_tracks_ - 1) os << ", ";
+  }  
   os << "\n"
      << "Charge = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
@@ -267,6 +274,7 @@ void NTBMSummary::SetNumberOfTracks(int number_of_tracks) {
     baby_mind_tangent_.at(i).resize(2);
     baby_mind_tangent_error_.at(i).resize(2);
   }
+  baby_mind_maximum_plane_.resize(number_of_tracks_);
   charge_.resize(number_of_tracks_);
   direction_.resize(number_of_tracks_);
   bunch_.resize(number_of_tracks_);
@@ -407,6 +415,19 @@ double NTBMSummary::GetBabyMindTangentError(int track, int view) const {
     throw std::out_of_range("View our of range");
   return GetBabyMindTangentError(track).at(view);
 }
+
+void NTBMSummary::SetBabyMindMaximumPlane(int track, int baby_mind_maximum_plane) {
+  if (track >= number_of_tracks_)
+    throw std::out_of_range("Number of track out of range");
+  baby_mind_maximum_plane_.at(track) = baby_mind_maximum_plane;
+}
+
+int NTBMSummary::GetBabyMindMaximumPlane(int track) const {
+  if (track >= number_of_tracks_)
+    throw std::out_of_range("Number of track out of range");
+  return baby_mind_maximum_plane_.at(track);
+}
+
 
 void NTBMSummary::SetCharge(int track, int charge) {
   charge_.at(track) = charge;

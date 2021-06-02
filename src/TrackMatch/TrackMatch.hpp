@@ -63,24 +63,24 @@ std::vector<double> GetBabyMindPlanePosition(const B2TrackSummary *track, int vi
 std::vector<double> GetBabyMindPlanePositionError(const B2TrackSummary *track, int view, int plane);
 
 /**
- * Fit Baby MIND top view with line
+ * Fit Baby MIND
  * @param track reconstructed B2TrackSummary object
  * @param c TCanvas for drawing
  * @param entry entry for canvas title
  * @param draw true if draw result pdf is required
+ * @param view view
  * @return at(0) means intercept and at(1) does slope in Baby MIND coordinate
  */
-std::vector<double> FitBabyMindTopView(const B2TrackSummary *track, TCanvas *c, int entry, bool draw);
+std::vector<double> FitBabyMind(const B2TrackSummary *track, TCanvas *c, int entry, bool draw, int view);
 
 /**
  * Get Baby MIND initial direction
  * @param track reconstructed B2TrackSummary object
  * @param c TCanvas for drawing
  * @param entry entry for canvas title
- * @param draw true if draw result pdf is required (for FitBabyMindTopView function)
  * @return at(0) means y and at(1) does x directions
  */
-std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCanvas *c, int entry, bool draw);
+std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCanvas *c, int entry);
 
 /**
  * Get Baby MIND initial position
