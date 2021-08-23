@@ -29,7 +29,9 @@ int MyGetBabyMindMaximumPlane(const B2TrackSummary *track) {
   while (const auto *cluster = it_cluster.Next()) {
     auto it_hit = cluster->BeginHit();
     while (const auto *hit = it_hit.Next()) {
-      if (hit->GetPlane() > return_max_plane) return_max_plane = hit->GetPlane();
+      if (hit->GetDetectorId() == B2Detector::kBabyMind && 
+	  hit->GetPlane() > return_max_plane)
+	return_max_plane = hit->GetPlane();
     }
   }
 
@@ -73,6 +75,7 @@ int main (int argc, char *argv[]) {
     }
 
     otree->Fill();
+    ntbm->Clear("C");
     i_itree++;
 
   }

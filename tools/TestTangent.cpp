@@ -94,9 +94,9 @@ int main (int argc, char *argv[]) {
 
     TFile *output = new TFile(argv[2], "recreate");
 
-    TH1D *hist_ang_y = new TH1D("hist_ang_y", "NINJA Tracker reconstructed Y angle;tan#theta_Y;Entries", 100, -2, 2);
-    TH1D *hist_ang_x = new TH1D("hist_ang_x", "NINJA Tracker reconstructed X angle;tan#theta_X;Entries", 100, -2, 2);
-    TH2D *hist_ang_xy = new TH2D("hist_ang_xy", "NINJA Tracker reconstructed tangent;tan#theta_X;tan#theta_Y",
+    TH1D *hist_ang_y = new TH1D("hist_ang_y", "NINJA Tracker reconstructed Y angle;tan#theta_{Y};Entries", 100, -2, 2);
+    TH1D *hist_ang_x = new TH1D("hist_ang_x", "NINJA Tracker reconstructed X angle;tan#theta_{X};Entries", 100, -2, 2);
+    TH2D *hist_ang_xy = new TH2D("hist_ang_xy", "NINJA Tracker reconstructed tangent;tan#theta_{X};tan#theta_{Y}",
 				100, -2, 2, 100, -2, 2);
 
     Int_t datatype = atoi(argv[3]);
