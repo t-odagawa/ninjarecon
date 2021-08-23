@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 
   logging::core::get()->set_filter
     (
-     logging::trivial::severity >= logging::trivial::info
+     logging::trivial::severity >= logging::trivial::debug
      );
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA File Separator Start==========";
@@ -73,18 +73,21 @@ int main(int argc, char *argv[]) {
     int reader_entry = 0;
 
     while(reader.ReadNextSpill() > 0) {
-      reader_entry++;
       auto &spill_summary = reader.GetSpillSummary();
-      if (reader_entry == 1)
+      if (reader_entry == 2) { // This should be modified after WAGASCI converter bug fix
 	start_time = spill_summary.GetBeamSummary().GetTimestamp();
+      }
       end_time = spill_summary.GetBeamSummary().GetTimestamp();
+      reader_entry++;
     }
 
     BOOST_LOG_TRIVIAL(debug) << "Start Unixtime : " << start_time;
     BOOST_LOG_TRIVIAL(debug) << "End Unixtime : " << end_time;
 
     if (start_time == 0 || end_time == 0) {
-      BOOST_LOG_TRIVIAL(info) << "Start (End) Unixtime not set";
+      BOOST_LOG_TRIVIAL(error) << "Start (End) Unixtime not set";
+      BOOST_LOG_TRIVIAL(error) << "Start Unixtime : " << start_time;
+      BOOST_LOG_TRIVIAL(error) << "End Unixtime : " << end_time;
       std::exit(1);
     }
 
