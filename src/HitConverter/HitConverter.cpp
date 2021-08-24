@@ -14,9 +14,11 @@
 #include "B2Reader.hh"
 #include "B2Writer.hh"
 #include "B2Dimension.hh"
+#include "B2Enum.hh"
 #include "B2Measurement.hh"
 #include "B2HitSummary.hh"
 #include "B2SpillSummary.hh"
+#include "B2BeamSummary.hh"
 
 #include "NTBMConst.hh"
 
@@ -165,7 +167,7 @@ int main(int argc, char *argv[]) {
     while (reader.ReadNextSpill() > 0 && ntentry < ntentry_max) {
 
       auto &output_spill_summary = writer.GetSpillSummary();
-      
+      auto &beam_summary = output_spill_summary.GetBeamSummary();
       // Get corresponding NINJA entry
       Int_t ntentry_tmp = GetNinjaSpill(output_spill_summary, nttree, ntentry, unixtime);
       
@@ -174,6 +176,7 @@ int main(int argc, char *argv[]) {
 	nttree->GetEntry(ntentry_tmp);
 	ntentry = ntentry_tmp + 1;
 	AddNinjaAsHitSummary(output_spill_summary, lt, tt, pe, view, pln, ch, subrunid);
+	beam_summary.EnableDetector(B2Detector::kNinja);
       }
       writer.Fill();
       

@@ -70,15 +70,14 @@ int main(int argc, char *argv[]) {
     BOOST_LOG_TRIVIAL(debug) << "Tracker output file setting done";
 
     int start_time = 0, end_time = 0;
-    int reader_entry = 0;
+
 
     while(reader.ReadNextSpill() > 0) {
       auto &spill_summary = reader.GetSpillSummary();
-      if (reader_entry == 2) { // This should be modified after WAGASCI converter bug fix
+      if (reader.GetEntryNumber() == 1) {
 	start_time = spill_summary.GetBeamSummary().GetTimestamp();
       }
       end_time = spill_summary.GetBeamSummary().GetTimestamp();
-      reader_entry++;
     }
 
     BOOST_LOG_TRIVIAL(debug) << "Start Unixtime : " << start_time;
