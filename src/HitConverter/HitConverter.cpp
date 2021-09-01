@@ -178,6 +178,9 @@ int main(int argc, char *argv[]) {
 	AddNinjaAsHitSummary(output_spill_summary, lt, tt, pe, view, pln, ch, subrunid);
 	beam_summary.EnableDetector(B2Detector::kNinja);
       }
+      else {
+	beam_summary.DisableDetector(B2Detector::kNinja);
+      }
       writer.Fill();
       
     }

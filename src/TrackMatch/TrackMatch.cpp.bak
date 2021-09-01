@@ -118,7 +118,7 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
   }
 
   std::vector<double> tangent(2);
-  tangent.at(0) = 0.; tangent.at(1) = 0.;
+  tangent.at(0) = 0; tangent.at(1) = 0;
   ninja_clusters->SetNumberOfNinjaClusters(number_of_ninja_clusters);
   for(int icluster = 0; icluster < number_of_ninja_clusters; icluster++) {
     ninja_clusters->SetBabyMindTrackId(icluster, -1);
@@ -756,50 +756,27 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
   int itrack = 0;
   TCanvas *tmp = new TCanvas();
   while (const auto *track = it_track.Next()) {
-    if ( track->GetType() == B2TrackedParticle::kBabyMind3DTrack ) {
-      // if ( track->HasDetector(B2Detector::kProtonModule) ||
-      //      track->HasDetector(B2Detector::kWagasciUpstream) ) {
-      if ( MyHasDetector(track, B2Detector::kProtonModule) ||
-	   MyHasDetector(track, B2Detector::kWagasciUpstream) ) {
-	ntbm_summary->SetTrackType(itrack, 1); // sand muon like
+    if (MyHasDetector(track, B2Detector::kBabyMind)) {
+      if (MyHasDetector(track, B2Detector::kProtonModule) ||
+	  MyHasDetector(track, B2Detector::kWagasciUpstream)) { // upstream veto
+	ntbm_summary->SetTrackType(itrack, 1);
       } else {
-	ntbm_summary->SetTrackType(itrack, 0); // ECC interaction candidate
+	ntbm_summary->SetTrackType(itrack, 0);
       }
-    } else if ( track->GetType() == B2TrackedParticle::kPrimaryTrack &&
-		// track->HasDetector(B2Detector::kBabyMind) ) {
-		MyHasDetector(track, B2Detector::kBabyMind) ) {
-      // if ( track->HasDetector(B2Detector::kProtonModule) ||
-      //      track->HasDetector(B2Detector::kWagasciUpstream) ) {
-      if ( MyHasDetector(track, B2Detector::kProtonModule) ||
-	   MyHasDetector(track, B2Detector::kWagasciUpstream) ) {
-	ntbm_summary->SetTrackType(itrack, 1); // sand muon like (WAGASCI interaction candidate)
-	// } else if ( track->HasDetector(B2Detector::kWagasciDownstream) ) {
-      } else if ( MyHasDetector(track, B2Detector::kWagasciDownstream) ) {
-	ntbm_summary->SetTrackType(itrack, -1); // other (WAGASCI downstream interaction candidate)
+
+      ntbm_summary->SetBabyMindMaximumPlane(itrack, MyGetBabyMindMaximumPlane(track));
+      ntbm_summary->SetTrackLengthTotal(itrack, track->GetTrackLengthTotal());
+      ntbm_summary->SetBunch(itrack, MyGetBunch(track));
+      ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
+      ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
+      for (int view = 0; view < 2; view++) {
+	ntbm_summary->SetBabyMindPosition(itrack, view,
+					  GetBabyMindInitialPosition(track, view, tmp, 0, false).at(0));
       }
-    } else { // Not a track with Baby MIND hits
-      continue;
+      ntbm_summary->SetBabyMindTangent(itrack, GetBabyMindInitialDirection(track, tmp, 0));
+      itrack++;
     }
-
-
-    ntbm_summary->SetBabyMindMaximumPlane(itrack, MyGetBabyMindMaximumPlane(track));
-    ntbm_summary->SetTrackLengthTotal(itrack, track->GetTrackLengthTotal());
-    // ntbm_summary->SetBunch(itrack, track->GetBunch());
-    ntbm_summary->SetBunch(itrack, MyGetBunch(track));
-    if ( track->GetIsStopping() )
-      ntbm_summary->SetMomentumType(itrack, 0); // Baby MIND range method
-    else 
-      ntbm_summary->SetMomentumType(itrack, 1); // should be curvature type but not yet implemented
-    ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
-    ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
-    for (int view = 0; view < 2; view++) {
-      //      ntbm_summary->SetBabyMindPosition(itrack, view,
-      //				GetBabyMindInitialPosition(track, view, tmp, 0, false).at(0));
-    }
-    //ntbm_summary->SetBabyMindTangent(itrack, GetBabyMindInitialDirection(track, tmp, 0));
-    itrack++;
-  }
-
+  } 
 
   delete tmp;
 }
@@ -819,8 +796,8 @@ int main(int argc, char *argv[]) {
 
   logging::core::get()->set_filter
     (
-     logging::trivial::severity >= logging::trivial::info
-     //logging::trivial::severity >= logging::trivial::debug
+     //logging::trivial::severity >= logging::trivial::info
+     logging::trivial::severity >= logging::trivial::debug
      );
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Track Matching Start==========";
@@ -847,10 +824,12 @@ int main(int argc, char *argv[]) {
     int nspill = 0;
 
     while (reader.ReadNextSpill() > 0) {
-     
+      nspill++;
+      //if (nspill != 20062) continue;
+
       auto &input_spill_summary = reader.GetSpillSummary();
       int timestamp = input_spill_summary.GetBeamSummary().GetTimestamp();
-      BOOST_LOG_TRIVIAL(debug) << "entry : " << reader.GetEntryNumber();
+      BOOST_LOG_TRIVIAL(debug) << "entry : " << nspill;
       BOOST_LOG_TRIVIAL(debug) << "timestamp : " << timestamp;
  
       TransferBeamInfo(input_spill_summary, my_ntbm);
@@ -869,7 +848,7 @@ int main(int argc, char *argv[]) {
 	CreateNinjaCluster(ninja_hits, my_ntbm);
 	ReconstructNinjaPosition(my_ntbm);
       }
-      
+
       // Extrapolate BabyMIND tracks to the NINJA position
       // and get the best cluster to match each BabyMIND track
       int number_of_tracks = 0;
@@ -877,12 +856,9 @@ int main(int argc, char *argv[]) {
       int bunch_difference = -1; // difference between the bunch in interest and the start_bunch
       auto it_track = input_spill_summary.BeginReconTrack();
       while (const auto *track = it_track.Next()) {
-	if ( ( track->GetType() == B2TrackedParticle::kBabyMind3DTrack ) || // not start from the other WAGASCI modules
-	     ( ( track->GetType() == B2TrackedParticle::kPrimaryTrack ) && 
-	  //   ( track->HasDetector(B2Detector::kBabyMind) ) ) ) {
-	       ( MyHasDetector(track, B2Detector::kBabyMind) ) ) ) { // starts from the other WAGASCI modules and has Baby MIND hits
+	if (MyHasDetector(track, B2Detector::kBabyMind)) {
 	  number_of_tracks++;
-	  /*
+	  
 	  if (start_bunch > 0)
 	    bunch_difference = MyGetBunch(track) - start_bunch;
 	  if (NinjaHitExpected(track, c, timestamp) &&
@@ -896,7 +872,6 @@ int main(int argc, char *argv[]) {
 	      }
 	    }
 	  }
-	  }*/
 	}
       }
       
@@ -908,7 +883,7 @@ int main(int argc, char *argv[]) {
 	//ReconstructNinjaTangent(my_ntbm); // reconstruct tangent
 	//ReconstructNinjaPosition(my_ntbm); // use reconstructed tangent info
       }
-      
+
       // Create output tree
       BOOST_LOG_TRIVIAL(debug) << *my_ntbm;
       ntbm_tree->Fill();

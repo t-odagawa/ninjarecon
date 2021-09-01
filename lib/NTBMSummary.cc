@@ -15,13 +15,15 @@ void NTBMSummary::Clear(Option_t *option) {
   timestamp_ = 0.;
   bsd_good_spill_flag_ = -1;
   wagasci_good_spill_flag_ = -1;
+  for (int i = 0; i < 8; i++) 
+    detector_flags_[i] = -1;
   number_of_tracks_ = 0;
   track_type_.clear();
   momentum_type_.clear();
   momentum_.clear();
   baby_mind_position_.clear();
   baby_mind_tangent_.clear();
-  // baby_mind_maximum_plane_.clear();
+  baby_mind_maximum_plane_.clear();
   charge_.clear();
   direction_.clear();
   bunch_.clear();
@@ -54,6 +56,12 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
      << "Timestamp = " << obj.timestamp_ << "\n"
      << "BSD good spill flag (good : 1, bad : 0) = " << obj.bsd_good_spill_flag_ << "\n"
      << "WAGASCI good spill flag (good : 1, bad : 0) = " << obj.wagasci_good_spill_flag_ << "\n"
+     << "Detector flags (good : 1, bad : 0) = ";
+  for (int i = 0; i < 8; i++) {
+    os << i+1 << " : " << obj.detector_flags_[i];
+    if (i != 7) os << ", ";
+  }
+  os << "\n" 
      << "Number of Baby MIND tracks = " << obj.number_of_tracks_ << "\n"
      << "Baby MIND track type (ECC cand. : 0, Sand cand. : 1) = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
@@ -94,9 +102,15 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "Baby MIND maximum plane = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    // os << i + 1 << " : " << obj.baby_mind_maximum_plane_.at(i);
+    os << i + 1 << " : " << obj.baby_mind_maximum_plane_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }  
+  os << "\n"
+     << "Track length total = ";
+  for (int i = 0; i < obj.number_of_tracks_; i++) {
+    os << i + 1 << " : " << obj.track_length_total_.at(i);
+    if(i != obj.number_of_tracks_ - 1) os << ", ";
+  }
   os << "\n"
      << "Charge = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
@@ -256,6 +270,20 @@ int NTBMSummary::GetWagasciGoodSpillFlag() const {
   return wagasci_good_spill_flag_;
 }
 
+void NTBMSummary::SetDetectorFlags(int detector, int detector_flag) {
+  if (detector >= 0 && detector < 8)
+    detector_flags_[detector] = detector_flag;
+  else 
+    throw std::out_of_range("Detector id out of range");
+}
+
+int NTBMSummary::GetDetectorFlags(int detector) const {
+  if (detector >= 0 && detector < 8)
+    return detector_flags_[detector];
+  else 
+    throw std::out_of_range("Detector id out of range");
+}
+
 void NTBMSummary::SetNumberOfTracks(int number_of_tracks) {
   number_of_tracks_ = number_of_tracks;
   // Always set number of tracks before set other elements
@@ -274,7 +302,8 @@ void NTBMSummary::SetNumberOfTracks(int number_of_tracks) {
     baby_mind_tangent_.at(i).resize(2);
     baby_mind_tangent_error_.at(i).resize(2);
   }
-  // baby_mind_maximum_plane_.resize(number_of_tracks_);
+  baby_mind_maximum_plane_.resize(number_of_tracks_);
+  track_length_total_.resize(number_of_tracks_);
   charge_.resize(number_of_tracks_);
   direction_.resize(number_of_tracks_);
   bunch_.resize(number_of_tracks_);
@@ -416,10 +445,7 @@ double NTBMSummary::GetBabyMindTangentError(int track, int view) const {
   return GetBabyMindTangentError(track).at(view);
 }
 
-/*
 void NTBMSummary::SetBabyMindMaximumPlane(int track, int baby_mind_maximum_plane) {
-  if (track >= number_of_tracks_)
-    throw std::out_of_range("Number of track out of range");
   baby_mind_maximum_plane_.at(track) = baby_mind_maximum_plane;
 }
 
@@ -428,7 +454,16 @@ int NTBMSummary::GetBabyMindMaximumPlane(int track) const {
     throw std::out_of_range("Number of track out of range");
   return baby_mind_maximum_plane_.at(track);
 }
-*/
+
+void NTBMSummary::SetTrackLengthTotal(int track, double track_length_total) {
+  track_length_total_.at(track) = track_length_total;
+}
+
+double NTBMSummary::GetTrackLengthTotal(int track) const {
+  if (track >= number_of_tracks_)
+    throw std::out_of_range("Number of track out of range");
+  return track_length_total_.at(track);
+}
 
 void NTBMSummary::SetCharge(int track, int charge) {
   charge_.at(track) = charge;

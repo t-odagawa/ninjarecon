@@ -68,6 +68,10 @@ public :
 
   int GetWagasciGoodSpillFlag() const;
 
+  void SetDetectorFlags(int detector, int detector_flag);
+
+  int GetDetectorFlags(int detector) const;
+
   void SetNumberOfTracks(int number_of_tracks);
 
   int GetNumberOfTracks() const;
@@ -120,9 +124,13 @@ public :
 
   double GetBabyMindTangentError(int track, int view) const;
 
-  // void SetBabyMindMaximumPlane(int track, int baby_mind_maximum_plane);
+  void SetBabyMindMaximumPlane(int track, int baby_mind_maximum_plane);
 
-  // int GetBabyMindMaximumPlane(int track) const;
+  int GetBabyMindMaximumPlane(int track) const;
+
+  void SetTrackLengthTotal(int track, double track_length_total);
+
+  double GetTrackLengthTotal(int track) const;
 
   void SetCharge(int track, int charge);
 
@@ -283,6 +291,8 @@ private :
   int bsd_good_spill_flag_;
   ///> WAGASCI spill flag
   int wagasci_good_spill_flag_;
+  ///> detector flags
+  int detector_flags_[8];
   ///> Baby MIND information extracted from B2TrackSummary and B2ClusterSummary
   ///> track -> view(2)
   ///> Number of Baby MIND reconstructed tracks;
@@ -304,7 +314,9 @@ private :
   ///> Baby MIND reconstructed tangent error
   std::vector<std::vector<double>> baby_mind_tangent_error_;
   ///> Baby MIND maximum plane
-  // std::vector<int> baby_mind_maximum_plane_;
+  std::vector<int> baby_mind_maximum_plane_;
+  ///> WAGASCI total material length
+  std::vector<double> track_length_total_;
   ///> Baby MIND reconstructed charge (assuming muon +/-)
   std::vector<int> charge_;
   ///> Baby MIND reconstructed track direction (+/-)
@@ -350,7 +362,7 @@ private :
   ///> True tangent
   std::vector<std::vector<std::vector<double>>> true_tangent_;
 
-  ClassDefOverride(NTBMSummary, 9) // NT BM Summary
+  ClassDefOverride(NTBMSummary, 10) // NT BM Summary
 };
 
 #endif
