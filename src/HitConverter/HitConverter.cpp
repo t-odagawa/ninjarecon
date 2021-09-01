@@ -52,6 +52,20 @@ Int_t GetNinjaSpill(const B2SpillSummary &output_spill_summary, TTree *tree, Int
   return B2_NON_INITIALIZED_VALUE;
 }
 
+bool IsUnusedSlot(Int_t slot) {
+  if (slot == 50 || slot == 115) return true;
+  else return false;
+}
+
+bool IsDeadSlot(Int_t slot) {
+  if (slot == 92 ||
+      slot == 156 ||
+      slot == 157 ||
+      slot == 163 ||
+      slot == 207) return true;
+  else return false;
+}
+
 /**
  * Add NINJA tracker data as B2SpillSummary
  * @param output_spill_summary WAGASCI/BabyMIND spill summary where the hits added
@@ -63,7 +77,8 @@ void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
 			  Int_t subrunid) {
 
   for (int slot = 0; slot < NUMBER_OF_SLOTS_IN_TRACKER; slot++) {
-    if (slot == 50 || slot == 115) continue; // unused slot number
+    if (IsUnusedSlot(slot)) continue;
+    if (IsDeadSlot(slot)) continue;
     bool is_first_hit = false;
     bool is_after_hit = false;
     int bunch_difference = 0;
