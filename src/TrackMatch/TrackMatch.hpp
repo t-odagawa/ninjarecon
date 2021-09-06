@@ -73,14 +73,15 @@ std::vector<double> GetBabyMindPlanePositionError(const B2TrackSummary *track, i
  */
 std::vector<double> FitBabyMind(const B2TrackSummary *track, TCanvas *c, int entry, bool draw, int view);
 
+std::vector<double> FitBabyMindView(const B2TrackSummary *track, int view);
+
 /**
  * Get Baby MIND initial direction
  * @param track reconstructed B2TrackSummary object
- * @param c TCanvas for drawing
- * @param entry entry for canvas title
  * @return at(0) means y and at(1) does x directions
+ * @return at(2) means y and at(3) does x positions
  */
-std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCanvas *c, int entry);
+std::vector<double> GetBabyMindInitialDirectionAndPosition(const B2TrackSummary *track);
 
 /**
  * Get Baby MIND initial position
@@ -205,14 +206,6 @@ void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm
  * @param ntbm_summary NTBMSummary object
  */
 void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary);
-
-/**
- * Original function instead of B2HitsSet::GetBunch() as reconstructed track summary
- * does not have bunch information on its own
- * @param track reconstructed B2TrackSummary object
- * @return bunch
- */
-int MyGetBunch(const B2TrackSummary *track);
 
 /**
  * Transfer Baby MIND track info from B2TrackSummary to NTBMSummary

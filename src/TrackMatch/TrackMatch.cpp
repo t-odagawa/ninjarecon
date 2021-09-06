@@ -292,13 +292,36 @@ std::vector<double>FitBabyMind(const B2TrackSummary *track, TCanvas *c, int entr
 }
 
 
-std::vector<double> GetBabyMindInitialDirection(const B2TrackSummary *track, TCanvas *c, int entry) {
-std::vector<double> initial_direction(2); // 0:Y, 1:X
+std::vector<double> FitBabyMindView(const B2TrackSummary *track, int view) {
+  std::vector<double> param(2); // 0:intercept, 1:slope
 
- initial_direction.at(B2View::kSideView) = FitBabyMind(track, c, entry, false, B2View::kSideView).at(1);
- initial_direction.at(B2View::kTopView) = FitBabyMind(track, c, entry, false, B2View::kTopView).at(1);
+  param.at(0) = 0.;
+  param.at(1) = 0.;
+  return param;
+}
 
- return initial_direction;
+std::vector<double> GetBabyMindInitialDirectionAndPosition(const B2TrackSummary *track) {
+
+  std::vector<double> initial_direction_and_position(4);
+  // 0 : tan Y, 1 : tan X, 2 : pos Y, 3 : pos X
+
+  for (Int_t iview = 0; iview < 2; iview++) {
+    std::vector<double> param = FitBabyMindView(track, iview);
+    initial_direction_and_position.at(iview) = param.at(1);
+    switch (iview) {
+    case B2View::kSideView :
+      initial_direction_and_position.at(2) = 0.;
+      break;
+    case B2View::kTopView :
+      initial_direction_and_position.at(3) = 0.;
+      break;
+    default :
+      BOOST_LOG_TRIVIAL(error) << "Unknown view : " << iview;
+      std::exit(1);
+    }
+  }
+
+  return initial_direction_and_position;
 
 }
 
@@ -319,40 +342,33 @@ std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track, int 
 
 std::vector<double> CalculateExpectedPosition(const B2TrackSummary *track) {
 
-  TCanvas *tmp = new TCanvas();
-
   // Pre reconstructed position/direction in BM coordinate
-  std::vector<double> initial_direction =  GetBabyMindInitialDirection(track, tmp, 0);
-  std::vector<double> initial_position_x = GetBabyMindInitialPosition(track, B2View::kTopView, tmp, 0, false);
-  std::vector<double> initial_position_y = GetBabyMindInitialPosition(track, B2View::kSideView, tmp, 0, false);
+  std::vector<double> baby_mind_vector = GetBabyMindInitialDirectionAndPosition(track);
+  std::vector<double> initial_direction =  {baby_mind_vector.at(0), baby_mind_vector.at(1)};
+  std::vector<double> initial_position = {baby_mind_vector.at(2), baby_mind_vector.at(2)};
 
   std::vector<double> position(2);
-  double distance[2];
-  distance[B2View::kTopView] = BABYMIND_POS_Z + BM_SECOND_LAYER_POS
-    - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10.;
-  distance[B2View::kSideView] = BABYMIND_POS_Z + BM_FIRST_LAYER_POS
-    - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10.;
-  position.at(B2View::kTopView)  = initial_position_x.at(0) - initial_direction.at(B2View::kTopView) * distance[B2View::kTopView];
-  position.at(B2View::kSideView) = initial_position_y.at(0) - initial_direction.at(B2View::kSideView) * distance[B2View::kSideView];
-
-  // convert from BM coordinate to tracker one
-  position.at(B2View::kTopView)  = position.at(B2View::kTopView)
-    + BABYMIND_POS_X // global coordinate
-    - NINJA_POS_X // NINJA overall
-    - NINJA_TRACKER_POS_X + 6.; // NINJA tracker
-  position.at(B2View::kSideView) = position.at(B2View::kSideView)
-    + BABYMIND_POS_Y
-    - NINJA_POS_Y
-    - NINJA_TRACKER_POS_Y + 22.;
-
-  delete tmp;
+  std::vector<double> distance(2);
+  std::vector<double> baby_mind_layer_position = {BM_FIRST_LAYER_POS, BM_SECOND_LAYER_POS};
+  std::vector<double> baby_mind_position = {BABYMIND_POS_Y, BABYMIND_POS_X};
+  std::vector<double> ninja_overall_position = {NINJA_POS_Y, NINJA_POS_X};
+  std::vector<double> ninja_tracker_position = {NINJA_TRACKER_POS_Y, NINJA_TRACKER_POS_X};
+  std::vector<double> temporal_offset = {22., 6.};
+  for (Int_t iview = 0; iview < 2; iview++) {
+    // extrapolate Baby MIND track to the tracker position
+    distance.at(iview) = BABYMIND_POS_Z + baby_mind_layer_position.at(iview)
+      - NINJA_POS_Z - NINJA_TRACKER_POS_Z + (1 - 2 * iview) * 10.;
+    position.at(iview) = initial_position.at(iview) - initial_direction.at(iview) * distance.at(iview);
+    // convert coordinate from BM to the tracker
+    position.at(iview) = position.at(iview) + baby_mind_position.at(iview)
+      - ninja_overall_position.at(iview) - ninja_tracker_position.at(iview) + temporal_offset.at(iview);
+  }
 
   return position;
 
 }
 
-bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
-
+bool NinjaHitExpected(const B2TrackSummary *track) {
 
   std::vector<double> hit_expected_position = CalculateExpectedPosition(track);
   // Extrapolated position inside tracker area TODO
@@ -370,10 +386,11 @@ bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry) {
     return false;
 
   // Downstream WAGASCI interaction
-  /* if (track->GetParentVertex().GetInsideFiducialVolume() &&
-      track->GetParentVertex().GetDetector() == B2Detector::kWagasciDownstream)
+  if ( track->GetType() == B2TrackedParticle::kPrimaryTrack && // starting from target module FV
+       !MyHasDetector(track, B2Detector::kProtonModule) && 
+       !MyHasDetector(track, B2Detector::kWagasciUpstream) && // not upstream
+       MyHasDetector(track, B2Detector::kWagasciDownstream) ) // but only downstream
     return false;
-  */
 
   return true;
 }
@@ -723,33 +740,24 @@ void TransferBeamInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_sum
   }
 }
 
-int MyGetBunch(const B2TrackSummary *track) {
-  auto it_cluster = track->BeginCluster();
-  while (const auto *cluster = it_cluster.Next()) {
-    auto it_hit = cluster->BeginHit();
-    while (const auto *hit = it_hit.Next()) {
-      if (hit->GetDetectorId() == B2Detector::kBabyMind) return hit->GetBunch();
-    }
-  }
+/*
+void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summary) {
+  
+  auto it_recon_vertex = spill_summary.BeginReconVertex();
+  int itrack = 0;
+
+  while (auto *vertex = it_recon_vertex.Next()) {
+    auto it_outgoing_track = vertex->BeginTrack();
+    while (auto *track = it_outgoing_track.Next()) {
+      if ( track->GetType() == B2TrackedParticle::kBabyMind3DTrack ) {
+
+      }
+
+      itrack++;
+    } // while track
+  } // while vertex
 }
-
-
-int MyGetBabyMindMaximumPlane(const B2TrackSummary *track) {
-
-  int return_max_plane = -1;
-
-  auto it_cluster = track->BeginCluster();
-  while (const auto *cluster = it_cluster.Next()) {
-    auto it_hit = cluster->BeginHit();
-    while (const auto *hit = it_hit.Next()) {
-      if (hit->GetPlane() > return_max_plane) return_max_plane = hit->GetPlane();
-    }
-  }
-
-  return return_max_plane;
-
-}
-
+*/
 void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summary) {
 
   auto it_track = spill_summary.BeginReconTrack();
@@ -757,35 +765,35 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
   TCanvas *tmp = new TCanvas();
   while (const auto *track = it_track.Next()) {
     if ( track->GetType() == B2TrackedParticle::kBabyMind3DTrack ) {
-      // if ( track->HasDetector(B2Detector::kProtonModule) ||
-      //      track->HasDetector(B2Detector::kWagasciUpstream) ) {
-      if ( MyHasDetector(track, B2Detector::kProtonModule) ||
-	   MyHasDetector(track, B2Detector::kWagasciUpstream) ) {
+      if ( track->HasDetector(B2Detector::kProtonModule) ||
+	   track->HasDetector(B2Detector::kWagasciUpstream) ) {
+      //if ( MyHasDetector(track, B2Detector::kProtonModule) ||
+      //   MyHasDetector(track, B2Detector::kWagasciUpstream) ) {
 	ntbm_summary->SetTrackType(itrack, 1); // sand muon like
       } else {
 	ntbm_summary->SetTrackType(itrack, 0); // ECC interaction candidate
       }
+      continue;
     } else if ( track->GetType() == B2TrackedParticle::kPrimaryTrack &&
-		// track->HasDetector(B2Detector::kBabyMind) ) {
-		MyHasDetector(track, B2Detector::kBabyMind) ) {
-      // if ( track->HasDetector(B2Detector::kProtonModule) ||
-      //      track->HasDetector(B2Detector::kWagasciUpstream) ) {
-      if ( MyHasDetector(track, B2Detector::kProtonModule) ||
-	   MyHasDetector(track, B2Detector::kWagasciUpstream) ) {
+		track->HasDetector(B2Detector::kBabyMind) ) {
+		//	MyHasDetector(track, B2Detector::kBabyMind) ) {
+      if ( track->HasDetector(B2Detector::kProtonModule) ||
+	   track->HasDetector(B2Detector::kWagasciUpstream) ) {
+	//     if ( MyHasDetector(track, B2Detector::kProtonModule) ||
+	// MyHasDetector(track, B2Detector::kWagasciUpstream) ) {
 	ntbm_summary->SetTrackType(itrack, 1); // sand muon like (WAGASCI interaction candidate)
-	// } else if ( track->HasDetector(B2Detector::kWagasciDownstream) ) {
-      } else if ( MyHasDetector(track, B2Detector::kWagasciDownstream) ) {
+      } else if ( track->HasDetector(B2Detector::kWagasciDownstream) ) {
+	// } else if ( MyHasDetector(track, B2Detector::kWagasciDownstream) ) {
 	ntbm_summary->SetTrackType(itrack, -1); // other (WAGASCI downstream interaction candidate)
       }
     } else { // Not a track with Baby MIND hits
       continue;
     }
 
-
-    ntbm_summary->SetBabyMindMaximumPlane(itrack, MyGetBabyMindMaximumPlane(track));
+    ntbm_summary->SetBabyMindMaximumPlane(itrack, track->GetDownstreamHit().GetPlane());
     ntbm_summary->SetTrackLengthTotal(itrack, track->GetTrackLengthTotal());
-    // ntbm_summary->SetBunch(itrack, track->GetBunch());
-    ntbm_summary->SetBunch(itrack, MyGetBunch(track));
+    ntbm_summary->SetBunch(itrack, track->GetBunch());
+
     if ( track->GetIsStopping() )
       ntbm_summary->SetMomentumType(itrack, 0); // Baby MIND range method
     else 
@@ -793,10 +801,11 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
     ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
     ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
     for (int view = 0; view < 2; view++) {
-      //      ntbm_summary->SetBabyMindPosition(itrack, view,
-      //				GetBabyMindInitialPosition(track, view, tmp, 0, false).at(0));
+      ntbm_summary->SetBabyMindPosition(itrack, view,
+					GetBabyMindInitialDirectionAndPosition(track).at(view+2));
+      ntbm_summary->SetBabyMindTangent(itrack, view,
+				       GetBabyMindInitialDirectionAndPosition(track).at(view));
     }
-    //ntbm_summary->SetBabyMindTangent(itrack, GetBabyMindInitialDirection(track, tmp, 0));
     itrack++;
   }
 
@@ -879,24 +888,23 @@ int main(int argc, char *argv[]) {
       while (const auto *track = it_track.Next()) {
 	if ( ( track->GetType() == B2TrackedParticle::kBabyMind3DTrack ) || // not start from the other WAGASCI modules
 	     ( ( track->GetType() == B2TrackedParticle::kPrimaryTrack ) && 
-	  //   ( track->HasDetector(B2Detector::kBabyMind) ) ) ) {
+	       //   ( track->HasDetector(B2Detector::kBabyMind) ) ) ) {
 	       ( MyHasDetector(track, B2Detector::kBabyMind) ) ) ) { // starts from the other WAGASCI modules and has Baby MIND hits
 	  number_of_tracks++;
-	  /*
+	  
 	  if (start_bunch > 0)
-	    bunch_difference = MyGetBunch(track) - start_bunch;
-	  if (NinjaHitExpected(track, c, timestamp) &&
+	    bunch_difference = track->GetBunch() - start_bunch;
+	  if (NinjaHitExpected(track) &&
 	      bunch_difference < 7) { // Multi hit TDC range
 	    if (MatchBabyMindTrack(track, number_of_tracks-1, my_ntbm, bunch_difference)) {
 	      // If this is the first matching, set start_bunch
 	      if (start_bunch == 0) {
-		start_bunch = MyGetBunch(track) - bunch_difference;
+		start_bunch = track->GetBunch() - bunch_difference;
 		BOOST_LOG_TRIVIAL(debug) << "This is the first matching: "
 					 << "start bunch = " << start_bunch;
 	      }
 	    }
 	  }
-	  }*/
 	}
       }
       
