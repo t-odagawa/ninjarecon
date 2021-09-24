@@ -20,94 +20,62 @@
 bool CompareNinjaHits(const B2HitSummary* lhs, const B2HitSummary* rhs);
 
 /**
+ * Comparator for B2HitSummary vector sort in one Baby MIND B2TrackSummary
+ * @param lhs left hand side object
+ * @param rhs right hand side object
+ * @return true if the objects should not be swapped
+ */
+bool CompareBabyMindHitInOneTrack(const B2HitSummary* lhs, const B2HitSummary *rhs);
+
+/**
  * Create NINJA tracker clusters
  * @param ninja_hits NINJA Hit summary vector
  * @param ninja_clusters NTBMSummary for the spill (x/y separated and only NINJA tracker data)
  */
 void CreateNinjaCluster(std::vector<const B2HitSummary*> ninja_hits, NTBMSummary* ninja_clusters);
 
-/**
- * Original function instead of B2HitsSet::HasDetector() as reconstructed track summary
- * does not have detector information on its own
- * @param track reconstructed B2TrackSummary object
- * @param det detector id
- * @return true if the object has hits inside the detector
- */
-bool MyHasDetector(const B2TrackSummary *track, B2Detector det);
 
 /**
- * Get number of hits in each view of i-th plane of B2TrackSummary
- * @param track reconstructed B2TrackSummary object
- * @param view view
- * @param plane plane
- * @return number of hits
+ * Get position and error for one Baby MIND plane
  */
-int GetBabyMindPlaneHits(const B2TrackSummary *track, int view, int plane);
+std::vector<std::vector<double> > CalcMergedOnePlanePositionAndError(std::vector<std::vector<double> > position, int view);
 
 /**
- * Get the averaged x(y)/z position vector in Baby MIND in Baby MIND coordinate
- * @param track reconstructed B2TrackSummary object
- * @param view view in interest
- * @param plane plane in interest
- * @return at(0) means x or y averaged position, at(1) does z
+ * Get position and error for Baby MIND planes
  */
-std::vector<double> GetBabyMindPlanePosition(const B2TrackSummary *track, int view, int plane);
-
-/**
- * Get positional error vector in Baby MIND
- * @param track reconstructed B2TrackSummary object
- * @param view view in interest
- * @param plane plane in interest
- * @return at(0) means x or y positional error, at(1) does z
- */
-std::vector<double> GetBabyMindPlanePositionError(const B2TrackSummary *track, int view, int plane);
+std::vector<std::vector<std::vector<std::vector<double> > > > GenerateMergedPositionAndErrors(std::vector<const B2HitSummary* > hits);
 
 /**
  * Fit Baby MIND
  * @param track reconstructed B2TrackSummary object
- * @param c TCanvas for drawing
- * @param entry entry for canvas title
- * @param draw true if draw result pdf is required
- * @param view view
  * @return at(0) means intercept and at(1) does slope in Baby MIND coordinate
  */
-std::vector<double> FitBabyMind(const B2TrackSummary *track, TCanvas *c, int entry, bool draw, int view);
-
-std::vector<double> FitBabyMindView(const B2TrackSummary *track, int view);
+std::vector<std::vector<double> > FitBabyMind(const B2TrackSummary *track);
 
 /**
  * Get Baby MIND initial direction
  * @param track reconstructed B2TrackSummary object
- * @return at(0) means y and at(1) does x directions
- * @return at(2) means y and at(3) does x positions
+ * @return at(0) means y and at(1) does x directions 
+ * at(2) means y and at(3) does x positions
  */
 std::vector<double> GetBabyMindInitialDirectionAndPosition(const B2TrackSummary *track);
 
 /**
- * Get Baby MIND initial position
- * @param track reconstructed B2TrackSummary object
- * @param view view
- * @param c TCanvas for drawing
- * @param entry entry for canvas title
- * @param draw true if draw result pdf is required
- * @return at(0) means x or y and at(1) does z
- */
-std::vector<double> GetBabyMindInitialPosition(const B2TrackSummary *track, int view, TCanvas *c, int entry, bool draw);
-
-/**
  * Calculate hit expected position on the NINJA tracker position
- * @param track reconstructed B2TrackSumamry object
+ * @param ntbm NTBMSummary object of the spill in interest
+ * @param itrack Baby MIND track id (incremented from 0 NINJA internally)
  * @return at(0) means y and at(1) means x
  */
-std::vector<double> CalculateExpectedPosition(const B2TrackSummary *track);
+std::vector<double> CalculateExpectedPosition(NTBMSummary *ntbm, int itrack);
 
 /**
- * Check if the reconstructed track summary expected to have hits
+ * Check if the Baby MIND reconstructed track expected to have hits
  * in the NINJA tracker
- * @param track B2TrackSummary object of Reconstructed Baby MIND track
+ * @param ntbm NTBMSummary object of the spill in interest
+ * @param itrack Baby MIND track id (incremented from 0 NINJA internally)
  * @return true if the track expected to have hits else false
  */
-bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry);
+bool NinjaHitExpected(NTBMSummary *ntbm, int itrack);
 
 /**
  * Track matching between Baby MIND and NINJA tracker using x/y separated NTBMSummary
@@ -116,7 +84,7 @@ bool NinjaHitExpected(const B2TrackSummary *track, TCanvas *c, int entry);
  * @param baby_mind_track_id Baby MIND track id (incremented from 0 NINJA internally)
  * @param ntbm_in NTBMSummary object created in the CreateNinjaCluster function
  */
-bool MatchBabyMindTrack(const B2TrackSummary *track, int baby_mind_track_id, NTBMSummary *ntbm_in, int &bunch_diff);
+bool MatchBabyMindTrack(NTBMSummary *ntbm, int itrack, int &bunch_diff);
 
 /**
  * Get boolean if the value is in range [min, max]
@@ -135,10 +103,10 @@ bool IsInRange(double pos, double min, double max);
 bool IsMakeHit(double min, double max, int view, int plane, int slot);
 
 /**
- * Get boolean if range [min, max] does not make hit in a scintillator bar
+ * Get boolean if range [min, max] is between i and i+1-th scintillator bars
  * @param min minimum value of the range
  * @param max maximum value of the range
- * @param view pln slot detector ids of the scintillator bar
+ * @param view pln slot detector ids of the scintillator bar including slot = -1
  */
 bool IsInGap(double min, double max, int view, int plane, int slot);
 
@@ -170,27 +138,25 @@ bool IsGoodTrack(bool *condition);
 
 /**
  * Get number of hits in NINJA tracker one plane
- * @param ntbm_summary NTBMSummary object
+ * @param ntbm NTBMSummary object
  * @param cluster cluster
- * @param view view
- * @param plane plane
  * @return number of hits in the plane
  */
-int GetNinjaTrackerPlaneHits(NTBMSummary *ntbm_summary, int cluster, int view, int plane);
+std::vector<std::vector<int> > GetNinjaTrackerNumberOfPlaneHits(NTBMSummary* ntbm, int cluster);
 
 /**
  * Use Baby MIND information, reconstruct tangent for matching
  * between NINJA tracker and Emulsion shifter
- * @param ntbmsummary NTBMSummary object after the MatchBabyMindTrack function
+ * @param ntbm NTBMSummary object after the MatchBabyMindTrack function
  */
-void ReconstructNinjaTangent(NTBMSummary* ntbm_summary);
+void ReconstructNinjaTangent(NTBMSummary* ntbm);
 
 /**
  * Use Baby MIND information, reconstruct position for matching
  * between NINJA tracker and Emulsion shifter
- * @param ntbmsummary NTBMSummary object after the MatchBabyMindTrack function
+ * @param ntbm NTBMSummary object after the MatchBabyMindTrack function
  */
-void ReconstructNinjaPosition(NTBMSummary* ntbm_summary);
+void ReconstructNinjaPosition(NTBMSummary* ntbm);
 
 /**
  * Set TSS info as true position/angle information to evaluate

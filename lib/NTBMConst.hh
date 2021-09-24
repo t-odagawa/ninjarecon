@@ -1,6 +1,8 @@
 #ifndef NTBMCONST_HH
 #define NTBMCONST_HH
 
+#include <B2Const.hh>
+
 ///> Default non initialized value
 static const int NTBM_NON_INITIALIZED_VALUE = -2;
 
@@ -32,9 +34,12 @@ static const double NINJA_SCI_DIFF = 448.; // mm
 ///> Baby MIND vertical scintillator overlap
 static const double BM_VERTICAL_SCINTI_OVERLAP = 35.5; // mm
 ///> Baby MIND first layer position in Baby MIND coordinate TODO
-static const double BM_FIRST_LAYER_POS = -1975.; // mm
+//static const double BM_FIRST_LAYER_POS = -1975.; // mm
 ///> Baby MIND second layer position in Baby MIND coordinate TODO
-static const double BM_SECOND_LAYER_POS = -1720.5; // mm
+//static const double BM_SECOND_LAYER_POS = -1720.5; // before 2021/09/27
+// Nominal position of the 2nd layer in the BM coordinate
+// Offset + Scin_Mod_position.txt(2) + 5 cm (?) + 1.5 scintillators
+static const double BM_SECOND_LAYER_POS = BABYMIND_OFFSET_Z + 183. + 50. + 15.; // mm
 
 ///> Photoelectron threshold for the NINJA tracker
 static const double PE_THRESHOLD = 2.5;

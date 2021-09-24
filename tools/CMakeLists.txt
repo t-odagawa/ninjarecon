@@ -6,6 +6,9 @@ add_executable(TestPosition
 add_executable(TestTangent
 	TestTangent.cpp
 	)
+add_executable(TestBabyMindTangent
+	TestBabyMindTangent.cpp
+	)
 add_executable(TestPositionDifference
 	TestPositionDifference.cpp
 	)
@@ -22,6 +25,14 @@ target_link_libraries(TestPosition
 )
 
 target_link_libraries(TestTangent
+	${ROOT_LIBRARIES}
+	${Geant4_LIBRARIES}
+	${Boost_LIBRARIES}
+	${B2MC_LIBRARY}
+	libNTBM
+)
+
+target_link_libraries(TestBabyMindTangent
 	${ROOT_LIBRARIES}
 	${Geant4_LIBRARIES}
 	${Boost_LIBRARIES}
