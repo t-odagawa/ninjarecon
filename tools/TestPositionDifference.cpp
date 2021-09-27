@@ -128,7 +128,7 @@ int main (int argc, char *argv[]) {
 	  case B2View::kTopView :
 	  hit_expected_position.at(view) = baby_mind_position.at(view)
 	    - baby_mind_tangent.at(view) * (BABYMIND_POS_Z + BM_SECOND_LAYER_POS
-					    - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10. - 215.);
+					    - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10.);
 	    hit_expected_position.at(view) = hit_expected_position.at(view)
 	      + BABYMIND_POS_X // global coordinate
 	      - NINJA_POS_X // NINJA overall
@@ -136,8 +136,8 @@ int main (int argc, char *argv[]) {
 	    break;
 	  case B2View::kSideView :
 	  hit_expected_position.at(view) = baby_mind_position.at(view)
-	    - baby_mind_tangent.at(view) * (BABYMIND_POS_Z + BM_FIRST_LAYER_POS
-					    - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10. - 215.);
+	    - baby_mind_tangent.at(view) * (BABYMIND_POS_Z + BM_SECOND_LAYER_POS
+					    - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10.);
 	    hit_expected_position.at(view) = hit_expected_position.at(view)
 	      + BABYMIND_POS_Y // global coordinate
 	      - NINJA_POS_Y // NINJA overall

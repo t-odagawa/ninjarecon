@@ -104,12 +104,12 @@ if (B2MC_FOUND)
 endif ()
 
 # Event display library
-find_package(EventDisplay 0.0.5 REQUIRED)
-if (EVENT_DISPLAY_FOUND)
-    message(STATUS "Event display library -- found")
-    message(STATUS "Event display library include dir : ${EVENT_DISPLAY_INCLUDE_DIR}")
-    include_directories("${EVENT_DISPLAY_INCLUDE_DIR}")
-endif ()
+#find_package(EventDisplay 0.0.5 REQUIRED)
+#if (EVENT_DISPLAY_FOUND)
+#    message(STATUS "Event display library -- found")
+#    message(STATUS "Event display library include dir : ${EVENT_DISPLAY_INCLUDE_DIR}")
+#    include_directories("${EVENT_DISPLAY_INCLUDE_DIR}")
+#endif ()
 
 # Wagasci reconstruction library
 #find_package(WagasciRecon 0.0.1 REQUIRED)
