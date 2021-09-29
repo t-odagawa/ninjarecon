@@ -69,6 +69,10 @@ double weightcalculator(int detector, int material, double norm, double xsec) {
 
 }
 
+int GetBinId(double tangent) {
+  return std::floor(std::fabs(tangent) * 10);
+}
+
 int main (int argc, char *argv[]) {
 
   logging::core::get()->set_filter
@@ -99,6 +103,19 @@ int main (int argc, char *argv[]) {
     TH1D *hist_pos_x = new TH1D("hist_pos_x", "X difference;#DeltaX [mm];Entries", 250, -500, 500);
     TH1D *hist_ang_y =  new TH1D("hist_ang_y", "tan Y difference;#Deltatan_Y;Entries", 100, -0.25, 0.25);
     TH1D *hist_ang_x =  new TH1D("hist_ang_x", "tan X difference;#Deltatan_X;Entries", 100, -0.25, 0.25);
+
+    TH1D *hist_pos_y_slice[10];
+    TH1D *hist_pos_x_slice[10];
+    for (int islice = 0; islice < 10; islice++) {
+      hist_pos_y_slice[islice] = new TH1D(Form("hist_pos_y_slice%d", islice),
+					  Form("Y difference ( %.1f < tan#theta_{Y} < %.1f);#DeltaY [mm];Entries",
+					       islice * 0.1, (islice+1) * 0.1),
+					  250, -500, 500);
+      hist_pos_x_slice[islice] = new TH1D(Form("hist_pos_x_slice%d", islice),
+					  Form("X difference ( %.1f < tan#theta_{X} < %.1f);#DeltaX [mm];Entries",
+					       islice * 0.1, (islice+1) * 0.1),
+					  250, -500, 500);
+    }
 
     Int_t datatype = atoi(argv[3]);
 
@@ -157,6 +174,12 @@ int main (int argc, char *argv[]) {
 	hist_pos_x->Fill(hit_expected_position.at(B2View::kTopView) - ninja_position.at(B2View::kTopView), weight);
 	hist_ang_y->Fill(baby_mind_tangent.at(B2View::kSideView) - ninja_tangent.at(B2View::kSideView), weight);
 	hist_ang_x->Fill(baby_mind_tangent.at(B2View::kTopView) - ninja_tangent.at(B2View::kTopView), weight);
+	int side_bin_id = GetBinId(baby_mind_tangent.at(B2View::kSideView));
+	int top_bin_id = GetBinId(baby_mind_tangent.at(B2View::kTopView));
+	if (side_bin_id < 10)
+	  hist_pos_y_slice[side_bin_id]->Fill(hit_expected_position.at(B2View::kSideView) - ninja_position.at(B2View::kSideView), weight);
+	if (top_bin_id < 10)
+	  hist_pos_x_slice[top_bin_id]->Fill(hit_expected_position.at(B2View::kTopView) - ninja_position.at(B2View::kTopView), weight);
       } // icluster
     } // ientry
     
@@ -165,6 +188,10 @@ int main (int argc, char *argv[]) {
     hist_pos_x->Write();
     hist_ang_y->Write();
     hist_ang_x->Write();
+    for (int islice = 0; islice < 10; islice++) {
+      hist_pos_y_slice[islice]->Write();
+      hist_pos_x_slice[islice]->Write();
+    }
     output->Close();
     
   } catch (const std::runtime_error &error) {

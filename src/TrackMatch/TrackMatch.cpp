@@ -398,8 +398,7 @@ std::vector<double> CalculateExpectedPosition(NTBMSummary *ntbm, int itrack, dou
     position.at(iview) = baby_mind_pre_position.at(iview) - baby_mind_pre_direction.at(iview) * distance.at(iview);
     // convert coordinate from BM to the tracker
     position.at(iview) = position.at(iview) + baby_mind_position.at(iview)
-      - ninja_overall_position.at(iview) - ninja_tracker_position.at(iview) + TEMPORAL_OFFSET[iview];
-    // temporal offset should be removed in the final version
+      - ninja_overall_position.at(iview) - ninja_tracker_position.at(iview);
   }
 
   return position;
@@ -417,7 +416,7 @@ bool NinjaHitExpected(NTBMSummary *ntbm, int itrack, double z_shift) {
     return false;
 
   // Downstream WAGASCI interaction
-  if (ntbm->GetTrackType(itrack)==-1)
+  if ( ntbm->GetTrackType(itrack) == -1 )
     return false;
 
   return true;
@@ -690,9 +689,7 @@ void ReconstructNinjaTangent(NTBMSummary* ntbm) {
       baby_mind_initial_position.at(iview) = baby_mind_initial_position.at(iview)
 	+ baby_mind_position.at(iview)
 	- ninja_overall_position.at(iview)
-	- ninja_tracker_position.at(iview)
-	+ TEMPORAL_OFFSET[iview];
-      // temporal offset should be removed in the final version
+	- ninja_tracker_position.at(iview);
     }
 
     for (int iview = 0; iview < 2; iview++) {
@@ -959,8 +956,13 @@ int main(int argc, char *argv[]) {
       auto it_hit = input_spill_summary.BeginHit();
       std::vector<const B2HitSummary* > ninja_hits;
       while ( const auto *ninja_hit = it_hit.Next() ) {
-	if ( ninja_hit->GetDetectorId() == B2Detector::kNinja )
+	if ( ninja_hit->GetDetectorId() == B2Detector::kNinja ) {
+	  if ( B2Dimension::CheckDeadChannel(B2Detector::kNinja, ninja_hit->GetView(),
+					     ninja_hit->GetSingleReadout(), ninja_hit->GetPlane(),
+					     ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout())) )
+	    continue;
 	  ninja_hits.push_back(ninja_hit);
+	}
       }
 
       // Create X/Y NINJA clusters
