@@ -251,8 +251,10 @@ std::vector<std::vector<std::vector<std::vector<double> > > > GenerateMergedPosi
 			     << "Channel : "  << hit->GetSlot().GetValue(hit->GetSingleReadout());
 
     const TVector3 &pos = hit->GetScintillatorPosition().GetValue();
-
-    position_tmp.at(1).push_back(pos.Z());
+    if ( plane < 2 )
+      position_tmp.at(1).push_back(pos.Z());
+    else 
+      position_tmp.at(1).push_back(pos.Z() + BM_SCI_CORRECTION);
     switch (view) {
     case B2View::kSideView :
       position_tmp.at(0).push_back(pos.Y());
@@ -376,7 +378,7 @@ std::vector<double> GetBabyMindInitialDirectionAndPosition(const B2TrackSummary 
 
 }
 
-std::vector<double> CalculateExpectedPosition(NTBMSummary *ntbm, int itrack) {
+std::vector<double> CalculateExpectedPosition(NTBMSummary *ntbm, int itrack, double z_shift) {
 
   // Pre reconstructed position/direction in BM coordinate
   std::vector<double> baby_mind_pre_direction = ntbm->GetBabyMindTangent(itrack);
@@ -388,25 +390,25 @@ std::vector<double> CalculateExpectedPosition(NTBMSummary *ntbm, int itrack) {
   std::vector<double> baby_mind_position = {BABYMIND_POS_Y, BABYMIND_POS_X};
   std::vector<double> ninja_overall_position = {NINJA_POS_Y, NINJA_POS_X};
   std::vector<double> ninja_tracker_position = {NINJA_TRACKER_POS_Y, NINJA_TRACKER_POS_X};
-  std::vector<double> temporal_offset = {22., 6.}; // should be removed in the final version
 
   for ( int iview = 0; iview < 2; iview++ ) {
     // extrapolate Baby MIND track to the tracker position
     distance.at(iview) = BABYMIND_POS_Z + BM_SECOND_LAYER_POS
-      - NINJA_POS_Z - NINJA_TRACKER_POS_Z - (2 * iview - 1) * 10.;
+      - NINJA_POS_Z - NINJA_TRACKER_POS_Z - (2 * iview - 1) * 10. + z_shift;
     position.at(iview) = baby_mind_pre_position.at(iview) - baby_mind_pre_direction.at(iview) * distance.at(iview);
     // convert coordinate from BM to the tracker
     position.at(iview) = position.at(iview) + baby_mind_position.at(iview)
-      - ninja_overall_position.at(iview) - ninja_tracker_position.at(iview) + temporal_offset.at(iview);
+      - ninja_overall_position.at(iview) - ninja_tracker_position.at(iview) + TEMPORAL_OFFSET[iview];
+    // temporal offset should be removed in the final version
   }
 
   return position;
 
 }
 
-bool NinjaHitExpected(NTBMSummary *ntbm, int itrack) {
+bool NinjaHitExpected(NTBMSummary *ntbm, int itrack, double z_shift) {
 
-  std::vector<double> hit_expected_position = CalculateExpectedPosition(ntbm, itrack);
+  std::vector<double> hit_expected_position = CalculateExpectedPosition(ntbm, itrack, z_shift);
   // Extrapolated position inside tracker area TODO
   if ( ( hit_expected_position.at(B2View::kTopView) < -600. - 100. ||
          hit_expected_position.at(B2View::kTopView) > 448. + 100. ) ||
@@ -422,9 +424,9 @@ bool NinjaHitExpected(NTBMSummary *ntbm, int itrack) {
 
 }
 
-bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff) {
+bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z_shift) {
 
-  std::vector<double> hit_expected_position = CalculateExpectedPosition(ntbm, itrack);
+  std::vector<double> hit_expected_position = CalculateExpectedPosition(ntbm, itrack, z_shift);
 
   std::vector<int> matched_cluster_tmp(2);
   bool is_match = false;
@@ -441,8 +443,8 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff) {
   for ( int ibunch_difference = start_bunch_difference; ibunch_difference < end_bunch_difference; ibunch_difference++ ) {
 
     std::vector<double> position_difference_tmp(2);
-    position_difference_tmp.at(B2View::kSideView) = 200.;
-    position_difference_tmp.at(B2View::kTopView) = 300.;
+    position_difference_tmp.at(B2View::kSideView) = TEMPORAL_ALLOWANCE[B2View::kSideView];
+    position_difference_tmp.at(B2View::kTopView) = TEMPORAL_ALLOWANCE[B2View::kTopView];
 
     for ( int icluster = 0; icluster < ntbm->GetNumberOfNinjaClusters(); icluster++ ) {
       if ( ntbm->GetBunchDifference(icluster) != ibunch_difference ) continue;
@@ -471,8 +473,8 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff) {
       }
     } // icluster
 
-    if ( std::fabs(position_difference_tmp.at(B2View::kSideView)) < 200. &&
-	 std::fabs(position_difference_tmp.at(B2View::kTopView))  < 300. ) {
+    if ( std::fabs(position_difference_tmp.at(B2View::kSideView)) < TEMPORAL_ALLOWANCE[B2View::kSideView] &&
+	 std::fabs(position_difference_tmp.at(B2View::kTopView))  < TEMPORAL_ALLOWANCE[B2View::kTopView] ) {
       // If initial bunch difference = -1, bunch_diff is first set for this spill
       // else ibunch_diff is sweeped only ibunch_diff == bunch_diff and nothing changes
       bunch_diff = ibunch_difference;
@@ -518,7 +520,9 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff) {
 }
 
 bool IsInRange(double pos, double min, double max) {
-  if (min <= pos && pos <= max) return true;
+  if ( min > max ) 
+    throw std::invalid_argument(" Minimum should be smaller than maximum");
+  if ( min <= pos && pos <= max ) return true;
   else return false;
 }
 
@@ -602,12 +606,12 @@ bool IsInGap(double min, double max, int view, int plane, int slot) {
   if ( view == B2View::kTopView && plane == 1 ) {
     if ( slot == -1 || slot == 0 ) return false;
     else if ( slot == 1 ) return position_xy - NINJA_SCI_WIDTH / 2. - NINJA_TRACKER_GAP <= min;
-    else if ( slot == 6 ) return position_xy - NINJA_SCI_WIDTH * 3 / 2. - 2 * NINJA_TRACKER_GAP &&
+    else if ( slot == 6 ) return position_xy - NINJA_SCI_WIDTH * 3 / 2. - 2 * NINJA_TRACKER_GAP <= min &&
 			    max <= position_xy - NINJA_SCI_WIDTH / 2.;
     else if ( slot == 7 ) return false;
   }
   if ( view == B2View::kTopView && plane == 2 ) {
-    if ( slot == 19 ) return position_xy - NINJA_SCI_WIDTH * 3 / 2. - 2 * NINJA_TRACKER_GAP &&
+    if ( slot == 19 ) return position_xy - NINJA_SCI_WIDTH * 3 / 2. - 2 * NINJA_TRACKER_GAP <= min &&
 			max <= position_xy - NINJA_SCI_WIDTH / 2.;
     else if ( slot == 20 ) return false;
   }
@@ -633,15 +637,15 @@ bool IsInGap(double min, double max, int view, int plane, int slot) {
 }
 
 double GetTrackAreaMin(double pos, double tangent, int iplane, int jplane, int vertex) {
-  if (tangent > 0) return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
-					   + NINJA_SCI_THICK * (0 - vertex % 2));
+  if ( tangent > 0 ) return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
+					     + NINJA_SCI_THICK * (0 - vertex % 2));
   else return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
 			       + NINJA_SCI_THICK * (1 - vertex % 2));
 }
 
 double GetTrackAreaMax(double pos, double tangent, int iplane, int jplane, int vertex) {
-  if (tangent > 0) return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
-					   + NINJA_SCI_THICK * (1 - vertex % 2));
+  if ( tangent > 0 ) return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
+					     + NINJA_SCI_THICK * (1 - vertex % 2));
   else return pos + tangent * (NINJA_TRACKER_OFFSET_Z[jplane] - NINJA_TRACKER_OFFSET_Z[iplane]
 			       + NINJA_SCI_THICK * (0 - vertex % 2));
 }
@@ -674,7 +678,6 @@ void ReconstructNinjaTangent(NTBMSummary* ntbm) {
   std::vector<double> baby_mind_position = {BABYMIND_POS_Y, BABYMIND_POS_X};
   std::vector<double> ninja_overall_position = {NINJA_POS_Y, NINJA_POS_X};
   std::vector<double> ninja_tracker_position = {NINJA_TRACKER_POS_Y, NINJA_TRACKER_POS_X};
-  std::vector<double> temporal_offset = {22., 6.}; // Should be removed in the final version
 
   for (int icluster = 0; icluster < ntbm->GetNumberOfNinjaClusters(); icluster++) {
     
@@ -688,12 +691,13 @@ void ReconstructNinjaTangent(NTBMSummary* ntbm) {
 	+ baby_mind_position.at(iview)
 	- ninja_overall_position.at(iview)
 	- ninja_tracker_position.at(iview)
-	+ temporal_offset.at(iview);
+	+ TEMPORAL_OFFSET[iview];
+      // temporal offset should be removed in the final version
     }
 
     for (int iview = 0; iview < 2; iview++) {
       tangent.at(iview) = (baby_mind_initial_position.at(iview) - ninja_position_tmp.at(iview))
-	/ (BABYMIND_POS_Z + BM_SECOND_LAYER_POS - NINJA_POS_Z - NINJA_TRACKER_POS_Z + (1-2*iview) * 10.);
+	/ (BABYMIND_POS_Z + BM_SECOND_LAYER_POS - NINJA_POS_Z - NINJA_TRACKER_POS_Z - (2*iview - 1) * 10.);
     }
     ntbm->SetNinjaTangent(icluster, tangent);
   }
@@ -923,9 +927,9 @@ int main(int argc, char *argv[]) {
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Track Matching Start==========";
 
-  if (argc != 3) {
+  if ( argc != 4 ) {
     BOOST_LOG_TRIVIAL(error) << "Usage : " << argv[0]
-			     << " <input B2 file path> <output NTBM file path>";
+			     << " <input B2 file path> <output NTBM file path> <z shift>";
     std::exit(1);
   }
 
@@ -937,10 +941,7 @@ int main(int argc, char *argv[]) {
     NTBMSummary* my_ntbm = nullptr;
     ntbm_tree->Branch("NTBMSummary", &my_ntbm);
 
-    TCanvas *c = new TCanvas("c", "c");
-#ifdef CANVAS
-    c->Print((TString)"test.pdf" + "[", "pdf");
-#endif
+    double z_shift = std::stof(argv[3]);
 
     int nspill = 0;
 
@@ -1004,9 +1005,9 @@ int main(int argc, char *argv[]) {
 	for ( int ibmtrack = 0; ibmtrack < my_ntbm->GetNumberOfTracks(); ibmtrack++ ) {
 	  if ( start_bunch > 0 ) // when the start bunch is already determined
 	    bunch_difference = my_ntbm->GetBunch(ibmtrack) - start_bunch;
-	  if ( NinjaHitExpected(my_ntbm, ibmtrack) && // Extrapolated position w/i tracker area
+	  if ( NinjaHitExpected(my_ntbm, ibmtrack, z_shift) && // Extrapolated position w/i tracker area
 	       bunch_difference < 7 ) { // Multi hit TDC range
-	    if ( MatchBabyMindTrack(my_ntbm, ibmtrack, bunch_difference) ) {
+	    if ( MatchBabyMindTrack(my_ntbm, ibmtrack, bunch_difference, z_shift) ) {
 	      // If this is the first matching, set start_bunch
 	      if ( start_bunch == 0 ) {
 		start_bunch = my_ntbm->GetBunch(ibmtrack) - bunch_difference;
@@ -1027,11 +1028,6 @@ int main(int argc, char *argv[]) {
       ntbm_tree->Fill();
       my_ntbm->Clear("C");
     }
-      
-#ifdef CANVAS
-    c->Print((TString)"test.pdf" + "]", "pdf");
-#endif
-    delete c;
 
     ntbm_file->cd();
     ntbm_tree->Write();

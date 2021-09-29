@@ -37,11 +37,16 @@ void CreateNinjaCluster(std::vector<const B2HitSummary*> ninja_hits, NTBMSummary
 
 /**
  * Get position and error for one Baby MIND plane
+ * @param position position list of Baby MIND hits
+ * @param view view
+ * @return position and error for one Baby MIND plane
  */
 std::vector<std::vector<double> > CalcMergedOnePlanePositionAndError(std::vector<std::vector<double> > position, int view);
 
 /**
  * Get position and error for Baby MIND planes
+ * @param hits vector of Baby MIND B2HitSummary objects
+ * @return Baby MIND position and errors
  */
 std::vector<std::vector<std::vector<std::vector<double> > > > GenerateMergedPositionAndErrors(std::vector<const B2HitSummary* > hits);
 
@@ -64,27 +69,31 @@ std::vector<double> GetBabyMindInitialDirectionAndPosition(const B2TrackSummary 
  * Calculate hit expected position on the NINJA tracker position
  * @param ntbm NTBMSummary object of the spill in interest
  * @param itrack Baby MIND track id (incremented from 0 NINJA internally)
+ * @param z_shift Difference of z distance from nominal
  * @return at(0) means y and at(1) means x
  */
-std::vector<double> CalculateExpectedPosition(NTBMSummary *ntbm, int itrack);
+std::vector<double> CalculateExpectedPosition(NTBMSummary *ntbm, int itrack, double z_shift);
 
 /**
  * Check if the Baby MIND reconstructed track expected to have hits
  * in the NINJA tracker
  * @param ntbm NTBMSummary object of the spill in interest
  * @param itrack Baby MIND track id (incremented from 0 NINJA internally)
+ * @param z_shift Difference of z distance from nominal
  * @return true if the track expected to have hits else false
  */
-bool NinjaHitExpected(NTBMSummary *ntbm, int itrack);
+bool NinjaHitExpected(NTBMSummary *ntbm, int itrack, double z_shift);
 
 /**
  * Track matching between Baby MIND and NINJA tracker using x/y separated NTBMSummary
  * and Baby MIND B2TrackSummary
- * @param track B2TrackSummary object of Baby MIND track
- * @param baby_mind_track_id Baby MIND track id (incremented from 0 NINJA internally)
- * @param ntbm_in NTBMSummary object created in the CreateNinjaCluster function
+ * @param ntbm NTBMSummary object created in the CreateNinjaCluster function
+ * @param itrack Baby MIND track id (incremented from 0 NINJA internally)
+ * @param bunch_diff Bunch difference b/w NINJA and Baby MIND
+ * @param z_shift Difference of z distance from nominal
+ * @return true if the track is matched to NINJA cluster
  */
-bool MatchBabyMindTrack(NTBMSummary *ntbm, int itrack, int &bunch_diff);
+bool MatchBabyMindTrack(NTBMSummary *ntbm, int itrack, int &bunch_diff, double z_shift);
 
 /**
  * Get boolean if the value is in range [min, max]
