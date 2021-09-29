@@ -95,8 +95,8 @@ int main (int argc, char *argv[]) {
 
     TFile *output = new TFile(argv[2], "recreate");
 
-    TH1D *hist_pos_y = new TH1D("hist_pos_y", "Y difference;#DeltaY [mm];Entries", 100, -200, 200);
-    TH1D *hist_pos_x = new TH1D("hist_pos_x", "X difference;#DeltaX [mm];Entries", 100, -200, 200);
+    TH1D *hist_pos_y = new TH1D("hist_pos_y", "Y difference;#DeltaY [mm];Entries", 250, -500, 500);
+    TH1D *hist_pos_x = new TH1D("hist_pos_x", "X difference;#DeltaX [mm];Entries", 250, -500, 500);
     TH1D *hist_ang_y =  new TH1D("hist_ang_y", "tan Y difference;#Deltatan_Y;Entries", 100, -0.25, 0.25);
     TH1D *hist_ang_x =  new TH1D("hist_ang_x", "tan X difference;#Deltatan_X;Entries", 100, -0.25, 0.25);
 
@@ -105,43 +105,49 @@ int main (int argc, char *argv[]) {
     for (int ientry = 0; ientry < tree->GetEntries(); ientry++) {
       tree->GetEntry(ientry);
       double weight = 1.;
-      if (datatype == 0)
-	double weight = weightcalculator(B2Detector::kWall, B2Material::kWater,
-					 ntbm->GetNormalization(), ntbm->GetTotalCrossSection());
-      else if (datatype == 1)
-	double weight = 1.;
-      else 
+      switch (datatype) {
+      case B2DataType::kMonteCarlo :
+	weight = weightcalculator(B2Detector::kWall, B2Material::kWater,
+				  ntbm->GetNormalization(), ntbm->GetTotalCrossSection());
+	break;
+      case B2DataType::kRealData :
+	weight = 1.;
+	break;
+      default :
 	throw std::invalid_argument("Datatype should be 0 (MC) or 1 (Physics data)!!");
+      }
 
       for (int icluster = 0; icluster < ntbm->GetNumberOfNinjaClusters(); icluster++) {
+
 	// Only 2d matched cluster
 	if (ntbm->GetNumberOfHits(icluster, B2View::kSideView) == 0 ||
 	    ntbm->GetNumberOfHits(icluster, B2View::kTopView) == 0) continue;
+
 	BOOST_LOG_TRIVIAL(debug) << "2d cluster!";
 	int baby_mind_track_id = ntbm->GetBabyMindTrackId(icluster);
-	if (baby_mind_track_id == -1) continue;
+
 	std::vector<double> baby_mind_position = ntbm->GetBabyMindPosition(baby_mind_track_id);
 	std::vector<double> baby_mind_tangent = ntbm->GetBabyMindTangent(baby_mind_track_id);
 	std::vector<double> hit_expected_position(2);
 	for (int view = 0; view < 2; view++) {
 	  switch (view) {
 	  case B2View::kTopView :
-	  hit_expected_position.at(view) = baby_mind_position.at(view)
-	    - baby_mind_tangent.at(view) * (BABYMIND_POS_Z + BM_SECOND_LAYER_POS
-					    - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10.);
+	    hit_expected_position.at(view) = baby_mind_position.at(view)
+	      - baby_mind_tangent.at(view) * (BABYMIND_POS_Z + BM_SECOND_LAYER_POS
+					      - NINJA_POS_Z - NINJA_TRACKER_POS_Z - 10.);
 	    hit_expected_position.at(view) = hit_expected_position.at(view)
 	      + BABYMIND_POS_X // global coordinate
 	      - NINJA_POS_X // NINJA overall
-	      - NINJA_TRACKER_POS_X + 15.; // NINJA tracker
+	      - NINJA_TRACKER_POS_X; // NINJA tracker
 	    break;
 	  case B2View::kSideView :
-	  hit_expected_position.at(view) = baby_mind_position.at(view)
-	    - baby_mind_tangent.at(view) * (BABYMIND_POS_Z + BM_SECOND_LAYER_POS
-					    - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10.);
+	    hit_expected_position.at(view) = baby_mind_position.at(view)
+	      - baby_mind_tangent.at(view) * (BABYMIND_POS_Z + BM_SECOND_LAYER_POS
+					      - NINJA_POS_Z - NINJA_TRACKER_POS_Z + 10.);
 	    hit_expected_position.at(view) = hit_expected_position.at(view)
 	      + BABYMIND_POS_Y // global coordinate
 	      - NINJA_POS_Y // NINJA overall
-	      - NINJA_TRACKER_POS_Y + 21.; // NINJA tracker
+	      - NINJA_TRACKER_POS_Y; // NINJA tracker
 	    break;
 	  }
 	}
@@ -151,9 +157,9 @@ int main (int argc, char *argv[]) {
 	hist_pos_x->Fill(hit_expected_position.at(B2View::kTopView) - ninja_position.at(B2View::kTopView), weight);
 	hist_ang_y->Fill(baby_mind_tangent.at(B2View::kSideView) - ninja_tangent.at(B2View::kSideView), weight);
 	hist_ang_x->Fill(baby_mind_tangent.at(B2View::kTopView) - ninja_tangent.at(B2View::kTopView), weight);
-      }
-    }
-
+      } // icluster
+    } // ientry
+    
     output->cd();
     hist_pos_y->Write();
     hist_pos_x->Write();
