@@ -57,6 +57,11 @@ bool IsUnusedSlot(Int_t slot) {
   else return false;
 }
 
+bool IsNoisySlot(Int_t slot) {
+  if (slot == 150) return true;
+  else return false;
+}
+
 bool IsDeadSlot(Int_t slot) {
   if (slot == 92 ||
       slot == 156 ||
@@ -83,6 +88,7 @@ void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
     bool is_after_hit = false;
     int bunch_difference = 0;
 
+    // slot 150 treatment? TODO
     if (pe[slot] > 2.5) is_first_hit = true;
     else {
       for (int i_bunch_difference = 1; i_bunch_difference <= 6; i_bunch_difference++) {
