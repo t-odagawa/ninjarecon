@@ -46,16 +46,18 @@ std::vector<std::vector<double> > CalcMergedOnePlanePositionAndError(std::vector
 /**
  * Get position and error for Baby MIND planes
  * @param hits vector of Baby MIND B2HitSummary objects
+ * @param datatype MC or real data
  * @return Baby MIND position and errors
  */
-std::vector<std::vector<std::vector<std::vector<double> > > > GenerateMergedPositionAndErrors(std::vector<const B2HitSummary* > hits);
+std::vector<std::vector<std::vector<std::vector<double> > > > GenerateMergedPositionAndErrors(std::vector<const B2HitSummary* > hits, int datatype);
 
 /**
  * Fit Baby MIND
  * @param track reconstructed B2TrackSummary object
+ * @param datatype MC or real data
  * @return at(0) means intercept and at(1) does slope in Baby MIND coordinate
  */
-std::vector<std::vector<double> > FitBabyMind(const B2TrackSummary *track);
+std::vector<std::vector<double> > FitBabyMind(const B2TrackSummary *track, int datatype);
 
 /**
  * Get Baby MIND initial direction
@@ -179,8 +181,9 @@ void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm
  * Transfer Beam information from B2BeamSummary to NTBMSummary
  * @param spill_summary B2SpillSummary object
  * @param ntbm_summary NTBMSummary object
+ * @param datatype MC or real data
  */
-void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary);
+void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary, int datatype);
 
 /**
  * Transfer Baby MIND track info from B2TrackSummary to NTBMSummary

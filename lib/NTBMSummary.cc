@@ -18,7 +18,7 @@ void NTBMSummary::Clear(Option_t *option) {
   for (int i = 0; i < 8; i++) 
     detector_flags_[i] = -1;
   number_of_tracks_ = 0;
-  track_type_.clear();
+  ninja_track_type_.clear();
   momentum_type_.clear();
   momentum_.clear();
   baby_mind_position_.clear();
@@ -65,7 +65,7 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
      << "Number of Baby MIND tracks = " << obj.number_of_tracks_ << "\n"
      << "Baby MIND track type (ECC cand. : 0, Sand cand. : 1) = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : " << obj.track_type_.at(i);
+    os << i + 1 << " : " << obj.ninja_track_type_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }
   os << "\n"
@@ -288,7 +288,7 @@ void NTBMSummary::SetNumberOfTracks(int number_of_tracks) {
   number_of_tracks_ = number_of_tracks;
   // Always set number of tracks before set other elements
   // related to Baby MIND
-  track_type_.resize(number_of_tracks_);
+  ninja_track_type_.resize(number_of_tracks_);
   momentum_type_.resize(number_of_tracks_);
   momentum_.resize(number_of_tracks_);
   momentum_error_.resize(number_of_tracks_);
@@ -313,14 +313,14 @@ int NTBMSummary::GetNumberOfTracks() const {
   return number_of_tracks_;
 }
 
-void NTBMSummary::SetTrackType(int track, int track_type) {
-  track_type_.at(track) = track_type;
+void NTBMSummary::SetNinjaTrackType(int track, int ninja_track_type) {
+  ninja_track_type_.at(track) = ninja_track_type;
 }
 
-int NTBMSummary::GetTrackType(int track) const {
+int NTBMSummary::GetNinjaTrackType(int track) const {
   if (track > number_of_tracks_)
     throw std::out_of_range("Number of track out of range");
-  return track_type_.at(track);
+  return ninja_track_type_.at(track);
 }
 
 void NTBMSummary::SetMomentumType(int track, int momentum_type) {

@@ -76,9 +76,9 @@ public :
 
   int GetNumberOfTracks() const;
 
-  void SetTrackType(int track, int track_type);
+  void SetNinjaTrackType(int track, int ninja_track_type);
 
-  int GetTrackType(int track) const;
+  int GetNinjaTrackType(int track) const;
 
   void SetMomentumType(int track, int momentum_type);
 
@@ -297,8 +297,8 @@ private :
   ///> track -> view(2)
   ///> Number of Baby MIND reconstructed tracks;
   int number_of_tracks_;
-  ///> Track type (0:ECC interaction cand, 1:sand muon, -1:other)
-  std::vector<int> track_type_;
+  ///> Track type (0:ECC interaction cand, 1:sand muon, 2:Upstream WAGASCI/PM -1:Downstream WAGASCI)
+  std::vector<int> ninja_track_type_;
   ///> Momentum measurement type (0:range, 1:curvature)
   std::vector<int> momentum_type_;
   ///> Baby MIND reconstructed momentum
@@ -362,7 +362,7 @@ private :
   ///> True tangent
   std::vector<std::vector<std::vector<double>>> true_tangent_;
 
-  ClassDefOverride(NTBMSummary, 10) // NT BM Summary
+  ClassDefOverride(NTBMSummary, 11) // NT BM Summary
 };
 
 #endif
