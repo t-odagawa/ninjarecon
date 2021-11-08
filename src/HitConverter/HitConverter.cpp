@@ -71,6 +71,10 @@ bool IsDeadSlot(Int_t slot) {
   else return false;
 }
 
+Double_t ConvertTotToPe(Int_t time_over_threshold) {
+  return 20.635 * std::pow(time_over_threshold, 0.3654) + 10.347;
+}
+
 /**
  * Add NINJA tracker data as B2SpillSummary
  * @param output_spill_summary WAGASCI/BabyMIND spill summary where the hits added
@@ -89,7 +93,8 @@ void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
     int bunch_difference = 0;
 
     // slot 150 treatment? TODO
-    if (pe[slot] > 2.5) is_first_hit = true;
+    if (IsNoisySlot(slot) && pe[slot] > 3.5) is_first_hit = true;
+    else if (pe[slot] > 2.5) is_first_hit = true;
     else {
       for (int i_bunch_difference = 1; i_bunch_difference <= 6; i_bunch_difference++) {
 	if ( ( ( subrunid == 0 &&
@@ -129,6 +134,7 @@ void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
     readouts.push_back(detector_to_single_readout(B2Detector::kNinja, scintillator_type, pln[slot]));
     for (const auto &readout : readouts) {
       output_hit_summary.SetSlot(readout, ch[slot]);
+      if (is_after_hit) pe[slot] = ConvertTotToPe(lt[slot] - tt[slot]); // for fancy event display
       output_hit_summary.SetHighGainPeu(readout, pe[slot]);
       output_hit_summary.SetTimeNs(readout, lt[slot]-tt[slot]); // Time over Threshold stored
     } 

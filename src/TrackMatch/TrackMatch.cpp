@@ -972,6 +972,12 @@ int main(int argc, char *argv[]) {
 					     ninja_hit->GetSingleReadout(), ninja_hit->GetPlane(),
 					     ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout())) )
 	    continue;
+
+	  if ( ninja_hit->GetView() == B2View::kTopView &&
+	       ninja_hit->GetPlane() == 0 &&
+	       ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()) == 25 &&
+	       ninja_hit->GetHighGainPeu(ninja_hit->GetSingleReadout()) < 3.5 )
+	    continue; // noisy channel
 	  // if ( ninja_hit->GetHighGainPeu(ninja_hit->GetSingleReadout()) < 3.5 )
 	  if ( ninja_hit->GetHighGainPeu(ninja_hit->GetSingleReadout()) < 2.5 )
 	    continue;
