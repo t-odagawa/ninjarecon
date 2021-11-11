@@ -8,6 +8,7 @@ NTBMSummary::NTBMSummary() {
 }
 
 void NTBMSummary::Clear(Option_t *option) {
+  entry_in_daily_file_ = -1;
   spill_pot_ = -1.;
   for ( double &i : bunch_pot_ )
     i = -1.;
@@ -46,7 +47,8 @@ void NTBMSummary::Clear(Option_t *option) {
 }
 
 std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
-  os << "Total POT of this spill = " << obj.spill_pot_ << "\n"
+  os << "Entry in daily file = " << obj.entry_in_daily_file_ << "\n"
+     << "Total POT of this spill = " << obj.spill_pot_ << "\n"
      << "POT for each bunch = ";
   for (int i = 0; i < NUMBER_OF_BUNCHES; i++) {
     os << i + 1 << " : " << obj.bunch_pot_[i];
@@ -217,6 +219,14 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
      << "Total cross section = " << obj.total_cross_section_ << "\n";
   
   return os;
+}
+
+void NTBMSummary::SetEntryInDailyFile(int entry_in_daily_file) {
+  entry_in_daily_file_ = entry_in_daily_file;
+}
+
+int NTBMSummary::GetEntryInDailyFile() const {
+  return entry_in_daily_file_;
 }
 
 void NTBMSummary::SetSpillPot(double spill_pot) {

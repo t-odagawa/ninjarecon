@@ -39,7 +39,7 @@ static const double BM_SECOND_LAYER_POS = BABYMIND_OFFSET_Z + 183. + 50. + 15.; 
 // Scintillator position used in the WAGASCI is not well corrected for our usage
 // plane more than 2nd should be much corrected.
 static const double BM_SCI_CORRECTION = -31.5; // mm
-static const double TEMPORAL_ALLOWANCE[2] = {250., 400.}; // mm
+static const double TEMPORAL_ALLOWANCE[2] = {200., 300.}; // mm
 
 ///> Photoelectron threshold for the NINJA tracker
 static const double PE_THRESHOLD = 2.5;

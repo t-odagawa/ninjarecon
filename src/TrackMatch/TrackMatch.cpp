@@ -411,10 +411,10 @@ bool NinjaHitExpected(NTBMSummary *ntbm, int itrack, double z_shift) {
 
   std::vector<double> hit_expected_position = CalculateExpectedPosition(ntbm, itrack, z_shift);
   // Extrapolated position inside tracker area TODO
-  if ( ( hit_expected_position.at(B2View::kTopView) < -600. - 100. ||
-         hit_expected_position.at(B2View::kTopView) > 448. + 100. ) ||
-       ( hit_expected_position.at(B2View::kSideView) < -448. - 100. ||
-	 hit_expected_position.at(B2View::kSideView) > 600.  + 100. ) )
+  if ( ( hit_expected_position.at(B2View::kTopView) < -600. - TEMPORAL_ALLOWANCE[B2View::kTopView] ||
+         hit_expected_position.at(B2View::kTopView) > 448. + TEMPORAL_ALLOWANCE[B2View::kTopView] ) ||
+       ( hit_expected_position.at(B2View::kSideView) < -448. - TEMPORAL_ALLOWANCE[B2View::kSideView] ||
+	 hit_expected_position.at(B2View::kSideView) > 600.  + TEMPORAL_ALLOWANCE[B2View::kSideView] ) )
     return false;
 
   // Downstream WAGASCI interaction
@@ -954,6 +954,8 @@ int main(int argc, char *argv[]) {
     int nspill = 0;
 
     while ( reader.ReadNextSpill() > 0 ) {
+
+      my_ntbm->SetEntryInDailyFile(reader.GetEntryNumber());
 
       auto &input_spill_summary = reader.GetSpillSummary();
       int timestamp = input_spill_summary.GetBeamSummary().GetTimestamp();

@@ -43,6 +43,10 @@ public :
   friend std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj);
 
   // Setter/Getter
+
+  void SetEntryInDailyFile(int entry_in_daily_file);
+
+  int GetEntryInDailyFile() const;
   
   void SetSpillPot(double spill_pot);
 
@@ -278,6 +282,8 @@ public :
 
 private :
 
+  ///> File information
+  int entry_in_daily_file_;
   ///> Beam information extracted from B2BeamSummary
   ///> Total POT of the spill
   double spill_pot_;
@@ -362,7 +368,7 @@ private :
   ///> True tangent
   std::vector<std::vector<std::vector<double>>> true_tangent_;
 
-  ClassDefOverride(NTBMSummary, 11) // NT BM Summary
+  ClassDefOverride(NTBMSummary, 12) // NT BM Summary
 };
 
 #endif
