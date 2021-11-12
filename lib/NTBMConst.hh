@@ -1,8 +1,6 @@
 #ifndef NTBMCONST_HH
 #define NTBMCONST_HH
 
-#include <B2Const.hh>
-
 ///> Default non initialized value
 static const int NTBM_NON_INITIALIZED_VALUE = -2;
 
@@ -35,7 +33,7 @@ static const double NINJA_SCI_DIFF = 448.; // mm
 static const double BM_VERTICAL_SCINTI_OVERLAP = 35.5; // mm
 // Nominal position of the 2nd layer in the BM coordinate
 // Offset + Scin_Mod_position.txt(2) + 5 cm (?) + 1.5 scintillators
-static const double BM_SECOND_LAYER_POS = BABYMIND_OFFSET_Z + 183. + 50. + 15.; // mm
+static const double BM_SECOND_LAYER_POS = -2000. + 183. + 50. + 15.; // mm
 // Scintillator position used in the WAGASCI is not well corrected for our usage
 // plane more than 2nd should be much corrected.
 static const double BM_SCI_CORRECTION = -31.5; // mm
