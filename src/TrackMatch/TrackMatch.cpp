@@ -887,7 +887,7 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
       ntbm_summary->SetTrackLengthTotal(itrack, track->GetTrackLengthTotal());
       double nll_plus = track->GetNegativeLogLikelihoodPlus();
       double nll_minus = track->GetNegativeLogLikelihoodMinus();
-      if ( nll_minus - nll_plus <= 4 )
+      if ( nll_minus - nll_plus >= 4 )
 	ntbm_summary->SetCharge(itrack, 1);
       else 
 	ntbm_summary->SetCharge(itrack, -1);

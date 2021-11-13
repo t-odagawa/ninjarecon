@@ -24,7 +24,6 @@
 
 namespace logging = boost::log;
 
-
 /**
  * Get corresponding NINJA spill number (entry number in the NINJA tracker root file)
  * to the WAGASCI spill summary
@@ -126,9 +125,14 @@ void AddNinjaAsHitSummary(B2SpillSummary &output_spill_summary,
     B2Dimension::GetPosNinjaTracker(ninja_view, (UInt_t) pln[slot], (UInt_t) ch[slot], pos);
     B2Dimension::GetErrorNinja(ninja_view, err);
     output_hit_summary.SetScintillatorPosition(B2Position(pos, err));
+    output_hit_summary.SetReconRelativePosition(B2Position(pos, err));
     B2ScintillatorType scintillator_type = (view[slot] == B2View::kTopView) ?
       B2ScintillatorType::kVertical : B2ScintillatorType::kHorizontal;
     output_hit_summary.SetScintillatorType(scintillator_type);
+    pos.SetX(pos.X() + NINJA_TRACKER_POS_X + NINJA_POS_X);
+    pos.SetY(pos.Y() + NINJA_TRACKER_POS_Y + NINJA_POS_Y);
+    pos.SetZ(pos.Z() + NINJA_TRACKER_POS_Z + NINJA_POS_Z);
+    output_hit_summary.SetReconAbsolutePosition(B2Position(pos, err));
 
     std::vector<B2Readout> readouts;
     readouts.push_back(detector_to_single_readout(B2Detector::kNinja, scintillator_type, pln[slot]));
