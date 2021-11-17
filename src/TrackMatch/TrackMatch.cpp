@@ -873,7 +873,8 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
 	    }
 	  } else if ( track->HasDetector(B2Detector::kWagasciDownstream) ) {
 	    if ( vertex->GetInsideFiducialVolume() ){
-	      ntbm_summary->SetNinjaTrackType(itrack, -1); // downstream mdoule interaction
+	      ntbm_summary->SetNinjaTrackType(itrack, 0);
+	      // ntbm_summary->SetNinjaTrackType(itrack, -1); // downstream mdoule interaction
 	    } else {
 	      ntbm_summary->SetNinjaTrackType(itrack, 0); // ECC interaction candidate
 	    }
