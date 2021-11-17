@@ -99,10 +99,17 @@ int main (int argc, char *argv[]) {
 
     TFile *output = new TFile(argv[2], "recreate");
 
-    TH1D *hist_pos_y = new TH1D("hist_pos_y", "Y difference;#DeltaY [mm];Entries", 250, -500, 500);
-    TH1D *hist_pos_x = new TH1D("hist_pos_x", "X difference;#DeltaX [mm];Entries", 250, -500, 500);
+    TH1D *hist_pos_y = new TH1D("hist_pos_y", ";y_{extrapolate} - y_{ST, one} [mm];Entries/4 mm", 250, -500, 500);
+    TH1D *hist_pos_x = new TH1D("hist_pos_x", ";x_{extrapolate} - x_{ST, one} [mm];Entries/4 mm", 250, -500, 500);
     TH1D *hist_ang_y =  new TH1D("hist_ang_y", "tan Y difference;#Deltatan_Y;Entries", 100, -0.25, 0.25);
     TH1D *hist_ang_x =  new TH1D("hist_ang_x", "tan X difference;#Deltatan_X;Entries", 100, -0.25, 0.25);
+
+    hist_pos_y->GetXaxis()->CenterTitle();
+    hist_pos_y->GetYaxis()->CenterTitle();
+    hist_pos_x->GetXaxis()->CenterTitle();
+    hist_pos_x->GetYaxis()->CenterTitle();
+    hist_pos_y->SetTitleSize(0.04,"XY");
+    hist_pos_x->SetTitleSize(0.04,"XY");
 
     TH1D *hist_pos_y_slice[10];
     TH1D *hist_pos_x_slice[10];

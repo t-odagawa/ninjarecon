@@ -97,8 +97,11 @@ int main (int argc, char *argv[]) {
 
     TH1D *hist_pos_y = new TH1D("hist_pos_y", "NINJA Tracker reconstructed Y;Y [mm];Entries", 100, -650, 650);
     TH1D *hist_pos_x = new TH1D("hist_pos_x", "NINJA Tracker reconstructed X;X [mm];Entries", 100, -650, 650);
-    TH2D *hist_pos_xy = new TH2D("hist_pos_xy", "NINJA Tracker reconstructed position;X [mm];Y [mm]",
-				100, -650, 650, 100, -650, 650);
+    TH2D *hist_pos_xy = new TH2D("hist_pos_xy", ";x [mm];y [mm]",
+				50, -630, 470, 50, -470, 630);
+    hist_pos_xy->GetXaxis()->CenterTitle();
+    hist_pos_xy->GetYaxis()->CenterTitle();
+
 
     Int_t datatype = atoi(argv[3]);
 

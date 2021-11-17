@@ -96,8 +96,13 @@ int main (int argc, char *argv[]) {
 
     TH1D *hist_ang_y = new TH1D("hist_ang_y", "NINJA Tracker reconstructed Y angle;tan#theta_{Y};Entries", 100, -2, 2);
     TH1D *hist_ang_x = new TH1D("hist_ang_x", "NINJA Tracker reconstructed X angle;tan#theta_{X};Entries", 100, -2, 2);
-    TH2D *hist_ang_xy = new TH2D("hist_ang_xy", "NINJA Tracker reconstructed tangent;tan#theta_{X};tan#theta_{Y}",
-				100, -2, 2, 100, -2, 2);
+    TH2D *hist_ang_xy = new TH2D("hist_ang_xy", ";tan#theta_{x};tan#theta_{y}",
+				100, -2, 2, 100, -1.5, 1.5);
+    hist_ang_xy->GetXaxis()->CenterTitle();
+    hist_ang_xy->GetYaxis()->CenterTitle();
+    hist_ang_xy->GetXaxis()->SetTitleOffset(0.95);
+    hist_ang_xy->GetYaxis()->SetTitleOffset(0.9);
+    hist_ang_xy->SetTitleSize(0.05, "XY");
 
     Int_t datatype = atoi(argv[3]);
 
