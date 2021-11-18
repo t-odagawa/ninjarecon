@@ -817,22 +817,49 @@ void ReconstructNinjaPosition(NTBMSummary* ntbm) {
 
 void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary) {
 
+  auto it_event = spill_summary.BeginTrueEvent();
+  const auto *event = it_event.Next();
+  auto &primary_vertex_summary = event->GetPrimaryVertex();
+
   auto it_emulsion = spill_summary.BeginEmulsion();
+  TVector3 true_position;
+  TVector3 true_direction;
+  bool found_true_muon_in_tss = false;
   while (const auto *emulsion = it_emulsion.Next()) {
+    if ( emulsion->GetParentTrackId() >= primary_vertex_summary.GetNumOutgoingTracks() )
+      continue;
     // Get position of TSS downstream film position
     if (emulsion->GetFilmType() == B2EmulsionType::kShifter && emulsion->GetPlate() == 15) {
       int particle_id = emulsion->GetParentTrack().GetParticlePdg();
-      TVector3 true_position = emulsion->GetAbsolutePosition().GetValue();
       if (!B2Pdg::IsMuonPlusOrMinus(particle_id)) continue;
-
-      // Get most muon-like cluster and set true info
-      for (int icluster = 0; icluster < ntbm_summary->GetNumberOfNinjaClusters(); icluster++) {
-	std::vector<double> ninja_position = ntbm_summary->GetNinjaPosition(icluster);
-
-      }
-
+      true_position = emulsion->GetAbsolutePosition().GetValue();
+      true_direction = emulsion->GetTangent().GetValue();
+      true_position.SetX(true_position.X() + true_direction.X() * 30. + NINJA_POS_X + NINJA_TRACKER_POS_X);
+      true_position.SetY(true_position.Y() + true_direction.Y() * 10. + NINJA_POS_Y + NINJA_TRACKER_POS_Y);
+      true_position.SetZ(true_position.Z() + NINJA_POS_Z + NINJA_TRACKER_POS_Z);
+      found_true_muon_in_tss = true;
+      break;
     }
   }
+
+  if ( !found_true_muon_in_tss ) return;
+
+  std::vector<double> true_ninja_position;
+  true_ninja_position.resize(2);
+  true_ninja_position.at(B2View::kSideView) = true_position.Y();
+  true_ninja_position.at(B2View::kTopView) = true_position.X();
+
+  for ( int icluster = 0; icluster < ntbm_summary->GetNumberOfNinjaClusters(); icluster++ ) {
+    if ( ntbm_summary->GetNumberOfHits(icluster, B2View::kSideView) > 0 &&
+	 ntbm_summary->GetNumberOfHits(icluster, B2View::kTopView) > 0 ) {
+      ntbm_summary->SetNumberOfTrueParticles(icluster, 1);
+      ntbm_summary->SetTrueParticleId(icluster, 0, (int)PDG_t::kMuonMinus);
+      ntbm_summary->SetTruePosition(icluster, 0, true_ninja_position);
+    } else {
+      ntbm_summary->SetNumberOfTrueParticles(icluster, 0);
+    }
+  }
+
 }
 
 // Transfer B2Summary information
@@ -1050,6 +1077,9 @@ int main(int argc, char *argv[]) {
 	// Update NINJA hit summary information
 	ReconstructNinjaTangent(my_ntbm); // reconstruct tangent
 	ReconstructNinjaPosition(my_ntbm); // use reconstructed tangent info
+	if ( datatype == B2DataType::kMonteCarlo &&
+	     my_ntbm->GetNumberOfNinjaClusters() > 0 )
+	  SetTruePositionAngle(input_spill_summary, my_ntbm);
       }
       
       // Create output tree

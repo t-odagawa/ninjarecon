@@ -217,6 +217,40 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "Normalization factor = " << obj.normalization_ << "\n"
      << "Total cross section = " << obj.total_cross_section_ << "\n";
+  os << "\n"
+     << "Number of true particles = ";
+  for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
+    os << i + 1 << " : "
+       << obj.number_of_true_particles_.at(i);
+    if(i != obj.number_of_ninja_clusters_ - 1) os << ", ";
+  }
+  os << "Particld PDG code = ";
+  for (int i = 0; i < obj.number_of_ninja_clusters_;i++) {
+    os << i + 1 << " : (";
+    for (int j = 0; j < obj.number_of_true_particles_.at(i); j++) {
+      os << obj.true_particle_id_.at(i).at(j);
+      if (j != obj.number_of_true_particles_.at(i) - 1) os << ", ";
+    }
+    os << ")";
+  }
+  os << "True position = ";
+  for (int i =0; i < obj.number_of_ninja_clusters_; i++) {
+    os << i + 1 << " : ";
+      for (int j = 0; j < obj.number_of_true_particles_.at(i); j++) {
+	os << j + 1 << " : ( "
+	   << obj.true_position_.at(i).at(j).at(0) << ", "
+	   << obj.true_position_.at(i).at(j).at(1) << ")\n";	
+      }
+  }
+  os << "True tangent = ";
+  for (int i =0; i < obj.number_of_ninja_clusters_; i++) {
+    os << i + 1 << " : ";
+      for (int j = 0; j < obj.number_of_true_particles_.at(i); j++) {
+	os << j + 1 << " : ( "
+	   << obj.true_tangent_.at(i).at(j).at(0) << ", "
+	   << obj.true_tangent_.at(i).at(j).at(1) << ")\n";	
+      }
+  }
   
   return os;
 }
@@ -519,6 +553,10 @@ void NTBMSummary::SetNumberOfNinjaClusters(int number_of_ninja_clusters) {
   ninja_position_error_.resize(number_of_ninja_clusters_);
   ninja_tangent_.resize(number_of_ninja_clusters);
   ninja_tangent_error_.resize(number_of_ninja_clusters_);
+  number_of_true_particles_.resize(number_of_ninja_clusters_);
+  true_particle_id_.resize(number_of_ninja_clusters_);
+  true_position_.resize(number_of_ninja_clusters_);
+  true_tangent_.resize(number_of_ninja_clusters_);
   for(int i = 0; i < number_of_ninja_clusters_; i++) {
     number_of_hits_.at(i).resize(2);
     plane_.at(i).resize(2);
@@ -783,10 +821,12 @@ double NTBMSummary::GetNinjaTangentError(int cluster, int view) const {
 
 void NTBMSummary::SetNumberOfTrueParticles(int cluster, int number_of_true_particles) {
   number_of_true_particles_.at(cluster) = number_of_true_particles;
-  for (int itrue = 0; itrue < number_of_true_particles_.at(cluster); itrue++) {
-    true_particle_id_.at(cluster).resize(number_of_true_particles_.at(cluster));
-    true_position_.at(cluster).resize(number_of_true_particles_.at(cluster));
-    true_tangent_.at(cluster).resize(number_of_true_particles_.at(cluster));
+  true_particle_id_.at(cluster).resize(number_of_true_particles_.at(cluster));
+  true_position_.at(cluster).resize(number_of_true_particles_.at(cluster));
+  true_tangent_.at(cluster).resize(number_of_true_particles_.at(cluster));
+  for ( int iparticle = 0; iparticle < number_of_true_particles_.at(cluster); iparticle++ ) {
+    true_position_.at(cluster).at(iparticle).resize(2);
+    true_tangent_.at(cluster).at(iparticle).resize(2);
   }
 }
 
