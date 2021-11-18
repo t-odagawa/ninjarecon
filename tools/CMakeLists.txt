@@ -15,6 +15,9 @@ add_executable(TestPositionDifference
 add_executable(TestOutput
 	TestOutput.cpp
 	)
+add_executable(TestTruePosition
+	TestTruePosition.cpp
+	)
 
 target_link_libraries(TestPosition
 	${ROOT_LIBRARIES}
@@ -56,7 +59,15 @@ target_link_libraries(TestOutput
 	libNTBM
 )
 
+target_link_libraries(TestTruePosition
+	${ROOT_LIBRARIES}
+	${Geant4_LIBRARIES}
+	${Boost_LIBRARIES}
+	${B2MC_LIBRARY}
+	libNTBM
+)
+
 # install the execute in the bin folder
-install(TARGETS TestPosition TestTangent TestPositionDifference TestOutput
+install(TARGETS TestPosition TestTangent TestPositionDifference TestOutput TestTruePosition
 		DESTINATION "${CMAKE_INSTALL_BINDIR}/test"
 		)

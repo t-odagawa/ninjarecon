@@ -834,8 +834,8 @@ void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm
       if (!B2Pdg::IsMuonPlusOrMinus(particle_id)) continue;
       true_position = emulsion->GetAbsolutePosition().GetValue();
       true_direction = emulsion->GetTangent().GetValue();
-      true_position.SetX(true_position.X() + true_direction.X() * 30. + NINJA_POS_X + NINJA_TRACKER_POS_X);
-      true_position.SetY(true_position.Y() + true_direction.Y() * 10. + NINJA_POS_Y + NINJA_TRACKER_POS_Y);
+      true_position.SetX(true_position.X() + true_direction.X() * 30. - NINJA_POS_X - NINJA_TRACKER_POS_X);
+      true_position.SetY(true_position.Y() + true_direction.Y() * 10. - NINJA_POS_Y - NINJA_TRACKER_POS_Y);
       true_position.SetZ(true_position.Z() + NINJA_POS_Z + NINJA_TRACKER_POS_Z);
       found_true_muon_in_tss = true;
       break;
