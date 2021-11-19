@@ -98,8 +98,8 @@ int main (int argc, char *argv[]) {
 
     TFile *output = new TFile(argv[2], "recreate");
 
-    TH1D *hist_pos_y = new TH1D("hist_pos_y", "NINJA position difference Y;#Delta Y [mm];Entries", 250,-500, 500);
-    TH1D *hist_pos_x = new TH1D("hist_pos_x", "NINJA position differnece X;#Delta X [mm];Entries", 250, -500 ,500);
+    TH1D *hist_pos_y = new TH1D("hist_pos_y", "NINJA position difference Y;#Delta Y [mm];Entries", 100,-25, 25);
+    TH1D *hist_pos_x = new TH1D("hist_pos_x", "NINJA position differnece X;#Delta X [mm];Entries", 100, -25 ,25);
 
     TH1D *hist_pos_y_slice[10];
     TH1D *hist_pos_x_slice[10];
@@ -107,11 +107,11 @@ int main (int argc, char *argv[]) {
       hist_pos_y_slice[islice] = new TH1D(Form("hist_pos_y_slice%d", islice),
 					  Form("Y difference ( %.1f < tan#theta_{Y} < %.1f);#DeltaY [mm];Entries",
 					       islice * 0.1, (islice+1) * 0.1),
-					  250, -500, 500);
+					  100, -25, 25);
       hist_pos_x_slice[islice] = new TH1D(Form("hist_pos_x_slice%d", islice),
 					  Form("X difference ( %.1f < tan#theta_{X} < %.1f);#DeltaX [mm];Entries",
 					       islice * 0.1, (islice+1) * 0.1),
-					  250, -500, 500);
+					  100, -25, 25);
     }
 
     for ( int ientry = 0; ientry < tree->GetEntries(); ientry++ ) {

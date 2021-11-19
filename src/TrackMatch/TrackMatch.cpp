@@ -829,14 +829,16 @@ void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm
     if ( emulsion->GetParentTrackId() >= primary_vertex_summary.GetNumOutgoingTracks() )
       continue;
     // Get position of TSS downstream film position
-    if (emulsion->GetFilmType() == B2EmulsionType::kShifter && emulsion->GetPlate() == 15) {
+    if (emulsion->GetFilmType() == B2EmulsionType::kShifter && emulsion->GetPlate() == 17) {
       int particle_id = emulsion->GetParentTrack().GetParticlePdg();
       if (!B2Pdg::IsMuonPlusOrMinus(particle_id)) continue;
       true_position = emulsion->GetAbsolutePosition().GetValue();
       true_direction = emulsion->GetTangent().GetValue();
-      true_position.SetX(true_position.X() + true_direction.X() * 30. - NINJA_POS_X - NINJA_TRACKER_POS_X);
-      true_position.SetY(true_position.Y() + true_direction.Y() * 10. - NINJA_POS_Y - NINJA_TRACKER_POS_Y);
-      true_position.SetZ(true_position.Z() + NINJA_POS_Z + NINJA_TRACKER_POS_Z);
+      true_position.SetX(true_position.X() + true_direction.X() * (NINJA_TSS_ATTACH_AC_THICK + 30.4)
+			 - NINJA_POS_X - NINJA_TRACKER_POS_X);
+      true_position.SetY(true_position.Y() + true_direction.Y() * (NINJA_TSS_ATTACH_AC_THICK + 10.4)
+			 - NINJA_POS_Y - NINJA_TRACKER_POS_Y);
+      true_position.SetZ(true_position.Z() - NINJA_POS_Z - NINJA_TRACKER_POS_Z);
       found_true_muon_in_tss = true;
       break;
     }
@@ -848,6 +850,10 @@ void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm
   true_ninja_position.resize(2);
   true_ninja_position.at(B2View::kSideView) = true_position.Y();
   true_ninja_position.at(B2View::kTopView) = true_position.X();
+  std::vector<double> true_ninja_tangent;
+  true_ninja_tangent.resize(2);
+  true_ninja_tangent.at(B2View::kSideView) = true_direction.Y();
+  true_ninja_tangent.at(B2View::kTopView) = true_direction.X();
 
   for ( int icluster = 0; icluster < ntbm_summary->GetNumberOfNinjaClusters(); icluster++ ) {
     if ( ntbm_summary->GetNumberOfHits(icluster, B2View::kSideView) > 0 &&
@@ -855,6 +861,7 @@ void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm
       ntbm_summary->SetNumberOfTrueParticles(icluster, 1);
       ntbm_summary->SetTrueParticleId(icluster, 0, (int)PDG_t::kMuonMinus);
       ntbm_summary->SetTruePosition(icluster, 0, true_ninja_position);
+      ntbm_summary->SetTrueTangent(icluster, 0, true_ninja_tangent);
     } else {
       ntbm_summary->SetNumberOfTrueParticles(icluster, 0);
     }
