@@ -148,6 +148,18 @@ public :
 
   int GetBunch(int track) const;
 
+  void SetNumberOfCorrTrackerClusters(int track, int number_of_corr_tracker_clusters);
+
+  int GetNumberOfCorrTrackerClusters(int track) const;
+
+  void SetTrackerClusterId(int track, std::vector<int> tracker_cluster_id);
+
+  void SetTrackerClusterId(int track, int cluster, int tracker_cluster_id);
+
+  std::vector<int> GetTrackerClusterId(int track) const;
+
+  int GetTrackerClusterId(int track, int clsuter) const;
+
   void SetNumberOfNinjaClusters(int number_of_ninja_clusters);
 
   int GetNumberOfNinjaClusters() const;
@@ -329,6 +341,10 @@ private :
   std::vector<int> direction_;
   ///> Bunch number where the track detected
   std::vector<int> bunch_;
+  ///> Number of corresponding tracker cluster id
+  std::vector<int> number_of_corr_tracker_clusters_;
+  ///> Corresponding tracker cluster id
+  std::vector<std::vector<int>> tracker_cluster_id_;
   ///> NINJA tracker information for muon track matching
   ///> cluster -> view(2) -> hit
   ///> Number of NINJA tracker 3d clusters
@@ -368,7 +384,7 @@ private :
   ///> True tangent
   std::vector<std::vector<std::vector<double>>> true_tangent_;
 
-  ClassDefOverride(NTBMSummary, 12) // NT BM Summary
+  ClassDefOverride(NTBMSummary, 13) // NT BM Summary
 };
 
 #endif

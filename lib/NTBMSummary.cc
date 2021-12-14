@@ -28,6 +28,8 @@ void NTBMSummary::Clear(Option_t *option) {
   charge_.clear();
   direction_.clear();
   bunch_.clear();
+  number_of_corr_tracker_clusters_.clear();
+  tracker_cluster_id_.clear();
   number_of_ninja_clusters_ = 0;
   baby_mind_track_id_.clear();
   number_of_hits_.clear();
@@ -351,6 +353,7 @@ void NTBMSummary::SetNumberOfTracks(int number_of_tracks) {
   charge_.resize(number_of_tracks_);
   direction_.resize(number_of_tracks_);
   bunch_.resize(number_of_tracks_);
+  number_of_corr_tracker_clusters_.resize(number_of_tracks_);
 }
 
 int NTBMSummary::GetNumberOfTracks() const {
@@ -537,6 +540,36 @@ int NTBMSummary::GetBunch(int track) const {
   if (track >= number_of_tracks_)
     throw std::out_of_range("Number of track out of range");
   return bunch_.at(track);
+}
+
+void NTBMSummary::SetNumberOfCorrTrackerClusters(int track, int number_of_corr_tracker_clusters) {
+  number_of_corr_tracker_clusters_.at(track) = number_of_corr_tracker_clusters;
+  tracker_cluster_id_.resize(number_of_corr_tracker_clusters_.at(track));
+}
+
+int NTBMSummary::GetNumberOfCorrTrackerClusters(int track) const {
+  if (track >= number_of_tracks_)
+    throw std::out_of_range("Number of track out of range");
+  return number_of_corr_tracker_clusters_.at(track);
+}
+
+void NTBMSummary::SetTrackerClusterId(int track, std::vector<int> tracker_cluster_id) {
+  for (int icluster = 0; icluster < tracker_cluster_id.size(); icluster++)
+    SetTrackerClusterId(track, icluster, tracker_cluster_id.at(icluster));
+}
+
+void NTBMSummary::SetTrackerClusterId(int track, int cluster, int tracker_cluster_id) {
+  tracker_cluster_id_.at(track).at(cluster) = tracker_cluster_id;
+}
+
+std::vector<int> NTBMSummary::GetTrackerClusterId(int track) const {
+  if (track >= number_of_tracks_)
+    throw std::out_of_range("Number of track out of range");
+  return tracker_cluster_id_.at(track);
+}
+
+int NTBMSummary::GetTrackerClusterId(int track, int cluster) const {
+  return GetTrackerClusterId(track).at(cluster);
 }
 
 void NTBMSummary::SetNumberOfNinjaClusters(int number_of_ninja_clusters) {
