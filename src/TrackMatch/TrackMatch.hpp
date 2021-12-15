@@ -189,8 +189,10 @@ void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_sum
  * Transfer Baby MIND track info from B2TrackSummary to NTBMSummary
  * @param spill_summary B2SpillSummary object
  * @param ntbm_summary NTBMSummary object
+ * @param track_id_list track id list
+ * @param datatype MC(0)/Data(1)
  */
-void TransferBabyMindTrackInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary);
+void TransferBabyMindTrackInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary, std::vector<int> track_id_list, int datatype);
 
 /**
  * Transfer MC normalization info from B2EventSummary to NTBMSummary
@@ -198,5 +200,7 @@ void TransferBabyMindTrackInfo(const B2SpillSummary& spill_summary, NTBMSummary 
  * @param ntbmsummary NTBMSummary object
  */
 void TransferMCInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary);
+
+int GetTrackLevel(const B2TrackSummary* track_summary);
 
 #endif

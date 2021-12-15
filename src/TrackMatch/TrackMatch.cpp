@@ -430,6 +430,8 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
   std::vector<double> hit_expected_position = CalculateExpectedPosition(ntbm, itrack, z_shift);
 
   std::vector<int> matched_cluster_tmp(2);
+  std::vector<std::vector<int> > matched_cluster_list;
+  
   bool is_match = false;
 
   // set bunch difference loop region
@@ -885,7 +887,7 @@ void TransferBeamInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_sum
   }
 }
 
-void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summary, int datatype) {
+void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summary, std::vector<int> track_id_list, int datatype) {
   
   int itrack = 0;
 
@@ -893,31 +895,31 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
   while ( auto *vertex = it_recon_vertex.Next() ) {
     auto it_outgoing_track = vertex->BeginTrack();
     while ( auto *track = it_outgoing_track.Next() ) {
-      if ( track->GetTrackType() == B2TrackType::kPrimaryTrack ) {
+      if ( std::find(track_id_list.begin(), track_id_list.end(), track->GetTrackId()) != track_id_list.end()) {
 	if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) {
-	  ntbm_summary->SetNinjaTrackType(itrack, 0); // ECC interaction candidate (or sand muon)
-	} else if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kMatchingTrack &&
-		    track->HasDetector(B2Detector::kBabyMind) ) {
+	  ntbm_summary->SetNinjaTrackType(itrack, 0);
+	}
+	else if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kMatchingTrack &&
+		  track->HasDetector(B2Detector::kBabyMind) ) {
 	  if ( track->HasDetector(B2Detector::kProtonModule) ||
 	       track->HasDetector(B2Detector::kWagasciUpstream) ) {
 	    if ( vertex->GetInsideFiducialVolume() ) {
-	      ntbm_summary->SetNinjaTrackType(itrack, 2); // upstream modules interaction
+	      ntbm_summary->SetNinjaTrackType(itrack, 2); // upstream interaction
 	    } else {
 	      ntbm_summary->SetNinjaTrackType(itrack, 1); // sand muon from wall
 	    }
 	  } else if ( track->HasDetector(B2Detector::kWagasciDownstream) ) {
 	    if ( vertex->GetInsideFiducialVolume() ){
 	      ntbm_summary->SetNinjaTrackType(itrack, 0);
-	      // ntbm_summary->SetNinjaTrackType(itrack, -1); // downstream mdoule interaction
+	      // ntbm_summary->SetNinjaTrackType(itrack, -1); // downstream interaction
 	    } else {
 	      ntbm_summary->SetNinjaTrackType(itrack, 0); // ECC interaction candidate
-	    }
-	  } else continue;
-	} else continue;
-      } else { // not primary track
-	continue;
+	    }	    
+	  }
+	}
       }
-      
+      else continue;
+
       ntbm_summary->SetBabyMindMaximumPlane(itrack, track->GetDownstreamHit().GetPlane());
       ntbm_summary->SetTrackLengthTotal(itrack, track->GetTrackLengthTotal());
       double nll_plus = track->GetNegativeLogLikelihoodPlus();
@@ -931,7 +933,7 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
       if ( track->GetIsStopping() )
 	ntbm_summary->SetMomentumType(itrack, 0); // Baby MIND range method
       else 
-	ntbm_summary->SetMomentumType(itrack, 1); // should be curvature type but not yet implemented
+	ntbm_summary->SetMomentumType(itrack, 1); // should be curvature type but not yet validated
       ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
       ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
       std::vector<Double_t> direction_and_position = GetBabyMindInitialDirectionAndPosition(track, datatype);
@@ -941,10 +943,9 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
       }
       
       itrack++;
-      
-    } // while track
-  } // while vertex
 
+    }
+  }
 }
 
 void TransferMCInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summary) {
@@ -952,6 +953,38 @@ void TransferMCInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summa
   const auto *event = it_event.Next();
   ntbm_summary->SetNormalization(event->GetNormalization());
   ntbm_summary->SetTotalCrossSection(event->GetTotalCrossSection());
+}
+
+int GetTrackLevel(const B2TrackSummary *track_summary) {
+  // 1:PM&UWG&DWG, 2:PM&UWG, 3:PM&DWG, 4:PM
+  // 5:UWG&&DWG, 6:UWG, 7:DWG
+  if ( track_summary->GetTrackType() != B2TrackType::kPrimaryTrack )
+    throw std::invalid_argument("Track Summary should be primary track");
+  if ( track_summary->GetPrimaryTrackType() != B2PrimaryTrackType::kMatchingTrack )
+    throw std::invalid_argument("Track Summary should be matched track");
+  if ( !track_summary->HasDetector(B2Detector::kBabyMind) )
+    throw std::invalid_argument("Track Summary should have Baby MIND hits");
+
+  if ( track_summary->HasDetector(B2Detector::kProtonModule) &&
+       track_summary->HasDetector(B2Detector::kWagasciUpstream) &&
+       track_summary->HasDetector(B2Detector::kWagasciDownstream) )
+    return 1;
+  else if ( track_summary->HasDetector(B2Detector::kProtonModule) &&
+	    track_summary->HasDetector(B2Detector::kWagasciUpstream) )
+    return 2;
+  else if ( track_summary->HasDetector(B2Detector::kProtonModule) &&
+	    track_summary->HasDetector(B2Detector::kWagasciDownstream) )
+    return 3;
+  else if ( track_summary->HasDetector(B2Detector::kProtonModule))
+    return 4;
+  else if ( track_summary->HasDetector(B2Detector::kWagasciUpstream) &&
+	    track_summary->HasDetector(B2Detector::kWagasciDownstream) )
+    return 5;
+  else if ( track_summary->HasDetector(B2Detector::kWagasciUpstream) )
+    return 6;
+  else if ( track_summary->HasDetector(B2Detector::kWagasciDownstream) )
+    return 7;
+  else throw std::invalid_argument("Track Summary is completely invalid");
 }
 
 // main
@@ -989,6 +1022,10 @@ int main(int argc, char *argv[]) {
     int nspill = 0;
 
     while ( reader.ReadNextSpill() > 0 ) {
+
+      //if (reader.GetEntryNumber() != 86) continue;
+      if (reader.GetEntryNumber() != 3586 &&
+	  reader.GetEntryNumber() != 3587) continue;
 
       my_ntbm->SetEntryInDailyFile(reader.GetEntryNumber());
 
@@ -1031,36 +1068,78 @@ int main(int argc, char *argv[]) {
       }
 
       // Collect all BM 3d tracks
-      int number_of_tracks = 0;
-      
+      std::vector<int> track_id_list;
+      std::vector<int> track_level_list;
+      std::vector<std::array<int, 2> > cluster_id_list;
+
       auto it_recon_vertex = input_spill_summary.BeginReconVertex();
       while ( auto *vertex = it_recon_vertex.Next() ) {
 	auto it_outgoing_track = vertex->BeginTrack();
-	while ( auto *track = it_outgoing_track.Next() ) {
-	  if ( track->GetTrackType() == B2TrackType::kPrimaryTrack ) {
-	    // not start from the other WAGASCI modules
-	    if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) {
-	      number_of_tracks++;
-	    // start from the other modules and have hits in Baby MIND
-	    } else if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kMatchingTrack && 
-			track->HasDetector(B2Detector::kBabyMind) ) {
-	      if ( track->HasDetector(B2Detector::kProtonModule) ||
-		   track->HasDetector(B2Detector::kWagasciUpstream) ||
-		   track->HasDetector(B2Detector::kWagasciDownstream) ) {
-		number_of_tracks++;
+	while ( const auto *track = it_outgoing_track.Next() ) {
+	  if ( track->GetTrackType() != B2TrackType::kPrimaryTrack ) continue; // only consider primary track
+	  BOOST_LOG_TRIVIAL(trace) << track->GetTrackId();
+	  auto it_cluster = track->BeginCluster();
+	  std::array<int, 2 > cluster_id_pair = {-1, -1};
+	  if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) {
+	    while ( auto *cluster = it_cluster.Next() ) {
+	      if ( !cluster->HasDetector(B2Detector::kBabyMind) ) continue;
+	      if ( cluster->GetView() == B2View::kSideView ) cluster_id_pair.at(B2View::kSideView) = cluster->GetClusterId();
+	      if ( cluster->GetView() == B2View::kTopView ) cluster_id_pair.at(B2View::kTopView) = cluster->GetClusterId();
+	    }
+	    if ( std::find(cluster_id_list.begin(), cluster_id_list.end(), 
+			   cluster_id_pair) == cluster_id_list.end() ) {
+	      cluster_id_list.push_back(cluster_id_pair);
+	      track_id_list.push_back(track->GetTrackId());
+	    }
+	    else {
+	      continue;
+	    }
+	  }
+	  else if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kMatchingTrack && 
+		    track->HasDetector(B2Detector::kBabyMind) ) {
+	    if ( track->HasDetector(B2Detector::kProtonModule) ||
+		 track->HasDetector(B2Detector::kWagasciUpstream) ||
+		 track->HasDetector(B2Detector::kWagasciDownstream) ) {
+	      while ( auto *cluster = it_cluster.Next() ) {
+		if ( !cluster->HasDetector(B2Detector::kBabyMind) ) continue;
+		if ( cluster->GetView() == B2View::kSideView ) cluster_id_pair.at(B2View::kSideView) = cluster->GetClusterId();
+		if ( cluster->GetView() == B2View::kTopView ) cluster_id_pair.at(B2View::kTopView) = cluster->GetClusterId();
+	      }
+	      int track_level = GetTrackLevel(track);
+	      auto same_track = std::find(cluster_id_list.begin(), cluster_id_list.end(),
+					  cluster_id_pair);
+	      if ( same_track == cluster_id_list.end() ) {
+		cluster_id_list.push_back(cluster_id_pair);
+		track_id_list.push_back(track->GetTrackId());
+		track_level_list.push_back(track_level);
+	      }
+	      else {
+		int same_track_index = std::distance(cluster_id_list.begin(), same_track);
+		if ( track_level_list.at(same_track_index) < track_level ) {
+		  track_level_list.at(same_track_index) = track_level;
+		  track_id_list.at(same_track_index) = track->GetTrackId();
+		}
+		else continue;
 	      }
 	    }
 	  }
 	} // track
       } // vertex
-            
-      my_ntbm->SetNumberOfTracks(number_of_tracks);
+
+      BOOST_LOG_TRIVIAL(debug) << "-Cluster ID-";
+      for (auto cluster_id : cluster_id_list)
+	BOOST_LOG_TRIVIAL(debug) << cluster_id.at(0) << ", " << cluster_id.at(1);
+      BOOST_LOG_TRIVIAL(debug) << "--Track ID--";
+      for (auto track_id : track_id_list)
+	BOOST_LOG_TRIVIAL(debug) << track_id << ", ";
+
+      my_ntbm->SetNumberOfTracks(track_id_list.size());
 
       // Extrapolate BabyMIND tracks to the NINJA position
       // and get the best cluster to match each BabyMIND track
-      if ( number_of_tracks > 0 ) {
+      if ( track_id_list.size() > 0 ) {
 
-	TransferBabyMindTrackInfo(input_spill_summary, my_ntbm, datatype);
+	TransferBabyMindTrackInfo(input_spill_summary, my_ntbm, track_id_list, datatype);
 
 	int start_bunch = 0; // bunch id (1-8) corresponds to NINJA tracker ADC triggered timing
 	int bunch_difference = -1; // difference between the bunch in interest and the start_bunch
