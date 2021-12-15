@@ -69,88 +69,103 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
      << "Number of Baby MIND tracks = " << obj.number_of_tracks_ << "\n"
      << "Baby MIND track type (ECC cand. : 0, Sand cand. : 1) = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : " << obj.ninja_track_type_.at(i);
+    os << i << " : " << obj.ninja_track_type_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }
   os << "\n"
      << "Momentum measurement type (Baby MIND range : 0, curvature : 1) = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : " << obj.momentum_type_.at(i);
+    os << i << " : " << obj.momentum_type_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }
   os << "\n"
      << "Absolute momentum = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : " << obj.momentum_.at(i) << " +/- "
+    os << i << " : " << obj.momentum_.at(i) << " +/- "
        << obj.momentum_error_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }
   os << "\n"
      << "Baby MIND initial position = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : ( "
+    os << i << " : ( "
        << obj.baby_mind_position_.at(i).at(0) << " +/- "
        << obj.baby_mind_position_error_.at(i).at(0) << ", "
        << obj.baby_mind_position_.at(i).at(1) << "+/-"
        << obj.baby_mind_position_error_.at(i).at(1) << " )\n";
   }
-  os << "\n"
-     << "Baby MIND initial tangent = ";
+  os << "Baby MIND initial tangent = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : ( "
+    os << i << " : ( "
        << obj.baby_mind_tangent_.at(i).at(0) << " +/- "
        << obj.baby_mind_tangent_error_.at(i).at(0) << ", "
        << obj.baby_mind_tangent_.at(i).at(1) << " +/- "
        << obj.baby_mind_tangent_error_.at(i).at(1) <<" )\n";
   }
-  os << "\n"
-     << "Baby MIND maximum plane = ";
+  os << "Baby MIND maximum plane = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : " << obj.baby_mind_maximum_plane_.at(i);
+    os << i << " : " << obj.baby_mind_maximum_plane_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }  
   os << "\n"
      << "Track length total = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : " << obj.track_length_total_.at(i);
+    os << i << " : " << obj.track_length_total_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }
   os << "\n"
      << "Charge = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : " << obj.charge_.at(i);
+    os << i << " : " << obj.charge_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }
   os << "\n"
      << "Direction = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : " << obj.direction_.at(i);
+    os << i << " : " << obj.direction_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
   }
   os << "\n"
      << "Bunch = ";
   for (int i = 0; i < obj.number_of_tracks_; i++) {
-    os << i + 1 << " : " << obj.bunch_.at(i);
+    os << i << " : " << obj.bunch_.at(i);
     if(i != obj.number_of_tracks_ - 1) os << ", ";
+  }
+  os << "\n"
+     << "Number of corresponding NINJA clusters = ";
+  for (int i = 0; i < obj.number_of_tracks_; i++) {
+    os << i << " : " << obj.number_of_corr_tracker_clusters_.at(i);
+   if (i != obj.number_of_tracks_ - 1) os << ", ";
+  }
+  os << "\n" 
+     << "Corresponding NINJA clusters = ";
+  for (int i = 0; i < obj.number_of_tracks_; i++) {
+    os << i << " : (";
+    for (int j = 0; j < obj.number_of_corr_tracker_clusters_.at(i); j++) {
+      os << obj.tracker_cluster_id_.at(i).at(j);
+      if (j != obj.number_of_corr_tracker_clusters_.at(i) - 1) os << ", ";
+    }
+    os << ")";
+    if (i != obj.number_of_tracks_ - 1) os << ", ";
   }
   os << "\n"
      << "Number of NINJA clusters = " << obj.number_of_ninja_clusters_ << "\n"
      << "Corresponding Baby MIND track ID = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : " << obj.baby_mind_track_id_.at(i);
+    os << i << " : " << obj.baby_mind_track_id_.at(i);
     if(i != obj.number_of_ninja_clusters_ - 1) os << ", ";
   }
   os << "\n"
      << "Number of hits in each cluster = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : ( "
+    os << i << " : ( "
        << obj.number_of_hits_.at(i).at(0) << ", "
        << obj.number_of_hits_.at(i).at(1) << " )\n";
   }
   os << "\n"
      << "Plane list = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : Y : ( ";
+    os << i << " : Y : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(0); j++) {
       os << obj.plane_.at(i).at(0).at(j);
       if (j != obj.number_of_hits_.at(i).at(0) - 1) os << ", ";
@@ -165,7 +180,7 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "Slot list = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : Y : ( ";
+    os << i << " : Y : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(0); j++) {
       os << obj.slot_.at(i).at(0).at(j);
       if (j != obj.number_of_hits_.at(i).at(0) - 1) os << ", ";
@@ -180,7 +195,7 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "Photoelectrons or Time over Threshold list = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : Y : ( ";
+    os << i << " : Y : ( ";
     for (int j = 0; j < obj.number_of_hits_.at(i).at(0); j++) {
       os << obj.pe_.at(i).at(0).at(j);
       if (j != obj.number_of_hits_.at(i).at(0) - 1) os << ", ";
@@ -195,13 +210,13 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "Bunch difference from the first matched bunch = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : " << obj.bunch_difference_.at(i);
+    os << i << " : " << obj.bunch_difference_.at(i);
     if (i != obj.number_of_ninja_clusters_ - 1) os << ", ";
   }
   os << "\n"
      << "NINJA tracker reconstructed position = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : ( "
+    os << i << " : ( "
        << obj.ninja_position_.at(i).at(0) << " +/- "
        << obj.ninja_position_error_.at(i).at(0) << ", "
        << obj.ninja_position_.at(i).at(1) << " +/- "
@@ -210,7 +225,7 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "NINJA tracker reconstructed tangent = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : ( "
+    os << i << " : ( "
        << obj.ninja_tangent_.at(i).at(0) << " +/- "
        << obj.ninja_tangent_error_.at(i).at(0) << ", "
        << obj.ninja_tangent_.at(i).at(1) << " +/- "
@@ -219,34 +234,36 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
   os << "\n"
      << "Normalization factor = " << obj.normalization_ << "\n"
      << "Total cross section = " << obj.total_cross_section_ << "\n";
-  os << "\n"
-     << "Number of true particles = ";
+  os << "Number of true particles = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : "
+    os << i << " : "
        << obj.number_of_true_particles_.at(i);
     if(i != obj.number_of_ninja_clusters_ - 1) os << ", ";
   }
-  os << "Particld PDG code = ";
+  os << "\n"
+     << "Particld PDG code = ";
   for (int i = 0; i < obj.number_of_ninja_clusters_;i++) {
-    os << i + 1 << " : (";
+    os << i << " : (";
     for (int j = 0; j < obj.number_of_true_particles_.at(i); j++) {
       os << obj.true_particle_id_.at(i).at(j);
       if (j != obj.number_of_true_particles_.at(i) - 1) os << ", ";
     }
     os << ")";
   }
-  os << "True position = ";
+  os << "\n"
+     << "True position = ";
   for (int i =0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : ";
+    os << i << " : ";
       for (int j = 0; j < obj.number_of_true_particles_.at(i); j++) {
 	os << j + 1 << " : ( "
 	   << obj.true_position_.at(i).at(j).at(0) << ", "
 	   << obj.true_position_.at(i).at(j).at(1) << ")\n";	
       }
   }
-  os << "True tangent = ";
+  os << "\n"
+     << "True tangent = ";
   for (int i =0; i < obj.number_of_ninja_clusters_; i++) {
-    os << i + 1 << " : ";
+    os << i << " : ";
       for (int j = 0; j < obj.number_of_true_particles_.at(i); j++) {
 	os << j + 1 << " : ( "
 	   << obj.true_tangent_.at(i).at(j).at(0) << ", "
