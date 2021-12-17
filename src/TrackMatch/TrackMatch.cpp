@@ -429,9 +429,9 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
 
   std::vector<double> hit_expected_position = CalculateExpectedPosition(ntbm, itrack, z_shift);
 
-  std::vector<int> matched_cluster_tmp(2);
-  std::vector<std::vector<int> > matched_cluster_list;
-  
+  std::vector<int> matched_side_cluster_list;
+  std::vector<int> matched_top_cluster_list;
+
   bool is_match = false;
 
   // set bunch difference loop region
@@ -442,13 +442,8 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
     end_bunch_difference = bunch_diff + 1;
   }
 
-  // Too many loops can be reduced TODO
   for ( int ibunch_difference = start_bunch_difference; ibunch_difference < end_bunch_difference; ibunch_difference++ ) {
-
-    std::vector<double> position_difference_tmp(2);
-    position_difference_tmp.at(B2View::kSideView) = TEMPORAL_ALLOWANCE[B2View::kSideView];
-    position_difference_tmp.at(B2View::kTopView) = TEMPORAL_ALLOWANCE[B2View::kTopView];
-
+  
     for ( int icluster = 0; icluster < ntbm->GetNumberOfNinjaClusters(); icluster++ ) {
       if ( ntbm->GetBunchDifference(icluster) != ibunch_difference ) continue;
       std::vector<int> number_of_hits = ntbm->GetNumberOfHits(icluster);
@@ -457,7 +452,7 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
       if ( number_of_hits.at(B2View::kTopView) > 0 ) {
 	if ( number_of_hits.at(B2View::kSideView) > 0 ) continue;
 	else view = B2View::kTopView;
-      } else if ( number_of_hits.at(B2View::kSideView > 0) ) {
+      } else if ( number_of_hits.at(B2View::kSideView) > 0 ) {
 	view = B2View::kSideView;
       } else {
 	BOOST_LOG_TRIVIAL(error) << "Cluster with no hit : "
@@ -467,56 +462,88 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
 
       // pre reconstructed NINJA position
       std::vector<double> ninja_position = ntbm->GetNinjaPosition(icluster);
-      
       if ( std::fabs(hit_expected_position.at(view) - ninja_position.at(view))
-	   < std::fabs(position_difference_tmp.at(view)) ) {
-	matched_cluster_tmp.at(view) = icluster;
-	position_difference_tmp.at(view) = hit_expected_position.at(view) - ninja_position.at(view);
-	BOOST_LOG_TRIVIAL(debug) << "matched 1d cluster update : view : " << view << " cluster : " << icluster;
+	   < TEMPORAL_ALLOWANCE[view] ) {
+	switch (view) {
+	case B2View::kSideView :
+	  matched_side_cluster_list.push_back(icluster);
+	  break;
+	case B2View::kTopView :
+	  matched_top_cluster_list.push_back(icluster);
+	  break;
+	default :
+	  throw std::invalid_argument("View is not correct");
+	}
       }
-    } // icluster
 
-    if ( std::fabs(position_difference_tmp.at(B2View::kSideView)) < TEMPORAL_ALLOWANCE[B2View::kSideView] &&
-	 std::fabs(position_difference_tmp.at(B2View::kTopView))  < TEMPORAL_ALLOWANCE[B2View::kTopView] ) {
+    } // icluster
+    if ( matched_side_cluster_list.size() > 0 &&
+	 matched_top_cluster_list.size() > 0 ) {
       // If initial bunch difference = -1, bunch_diff is first set for this spill
       // else ibunch_diff is sweeped only ibunch_diff == bunch_diff and nothing changes
       bunch_diff = ibunch_difference;
       is_match = true;
       break;
     }
-    
-  } // ibunch_difference
+   
+  } // ibunch difference
 
   if ( !is_match ) return false;
-  // Create a new 2d cluster and add it
-  std::vector<int> number_of_hits(2);
-  std::vector<std::vector<int> > plane(2);
-  std::vector<std::vector<int> > slot(2);
-  std::vector<std::vector<double> > pe(2);
-  std::vector<double> ninja_position(2);
-  std::vector<double> ninja_tangent(2);
 
-  ntbm->SetNumberOfNinjaClusters(ntbm->GetNumberOfNinjaClusters() + 1);
-  int new_cluster_id = ntbm->GetNumberOfNinjaClusters() - 1;
-  ntbm->SetBabyMindTrackId(new_cluster_id, itrack);
-  for ( int view = 0; view < 2; view++ ) {
-    number_of_hits.at(view) = ntbm->GetNumberOfHits(matched_cluster_tmp.at(view), view);
-    ninja_position.at(view) = ntbm->GetNinjaPosition(matched_cluster_tmp.at(view)).at(view);
-    ninja_tangent.at(view) = ntbm->GetNinjaTangent(matched_cluster_tmp.at(view)).at(view);
-    for ( int hit = 0; hit < number_of_hits.at(view); hit++ ) {
-      plane.at(view).push_back(ntbm->GetPlane(matched_cluster_tmp.at(view), view, hit));
-      slot.at(view).push_back(ntbm->GetSlot(matched_cluster_tmp.at(view), view, hit));
-      pe.at(view).push_back(ntbm->GetPe(matched_cluster_tmp.at(view), view, hit));
-    } // hit
-  } // view
+  // Create new 2d clusters and add them
+  int number_of_2d_clusters =  matched_side_cluster_list.size() * matched_top_cluster_list.size();
+  std::vector<int> corr_cluster_id = {};
 
-  ntbm->SetBunchDifference(new_cluster_id, bunch_diff);
-  ntbm->SetNumberOfHits(new_cluster_id, number_of_hits);
-  ntbm->SetNinjaPosition(new_cluster_id, ninja_position);
-  ntbm->SetNinjaTangent(new_cluster_id, ninja_tangent);
-  ntbm->SetPlane(new_cluster_id, plane);
-  ntbm->SetSlot(new_cluster_id, slot);
-  ntbm->SetPe(new_cluster_id, pe);
+  for ( int iside = 0; iside < matched_side_cluster_list.size(); iside++ ) {
+    for ( int itop = 0; itop < matched_top_cluster_list.size(); itop++) {
+      ntbm->SetNumberOfNinjaClusters(ntbm->GetNumberOfNinjaClusters() + 1);
+      int new_cluster_id = ntbm->GetNumberOfNinjaClusters() - 1;
+      ntbm->SetBabyMindTrackId(new_cluster_id, itrack);
+      corr_cluster_id.push_back(new_cluster_id);
+      std::vector<int> number_of_hits(2);
+      std::vector<std::vector<int> > plane(2);
+      std::vector<std::vector<int> > slot(2);
+      std::vector<std::vector<double> > pe(2);
+      std::vector<double> ninja_position(2);
+      std::vector<double> ninja_tangent(2);
+
+      for ( int view = 0; view < 2; view++ ) {
+	switch (view) {
+	case B2View::kSideView :
+	  number_of_hits.at(view) = ntbm->GetNumberOfHits(matched_side_cluster_list.at(iside), view);
+	  ninja_position.at(view) = ntbm->GetNinjaPosition(matched_side_cluster_list.at(iside)).at(view);
+	  ninja_tangent.at(view) = ntbm->GetNinjaTangent(matched_side_cluster_list.at(iside)).at(view);
+	  for ( int hit = 0; hit < number_of_hits.at(view); hit++ ) {
+	    plane.at(view).push_back(ntbm->GetPlane(matched_side_cluster_list.at(iside), view, hit));
+	    slot.at(view).push_back(ntbm->GetSlot(matched_side_cluster_list.at(iside), view, hit));
+	    pe.at(view).push_back(ntbm->GetPe(matched_side_cluster_list.at(iside), view, hit));
+	  } // hit
+	  break;
+	case B2View::kTopView :
+	  number_of_hits.at(view) = ntbm->GetNumberOfHits(matched_top_cluster_list.at(itop), view);
+	  ninja_position.at(view) = ntbm->GetNinjaPosition(matched_top_cluster_list.at(itop)).at(view);
+	  ninja_tangent.at(view) = ntbm->GetNinjaTangent(matched_top_cluster_list.at(itop)).at(view);
+	  for ( int hit = 0; hit < number_of_hits.at(view); hit++ ) {
+	    plane.at(view).push_back(ntbm->GetPlane(matched_top_cluster_list.at(itop), view, hit));
+	    slot.at(view).push_back(ntbm->GetSlot(matched_top_cluster_list.at(itop), view, hit));
+	    pe.at(view).push_back(ntbm->GetPe(matched_top_cluster_list.at(itop), view, hit));
+	  } // hit
+	  break;
+	}
+      } // view
+      ntbm->SetBunchDifference(new_cluster_id, bunch_diff);
+      ntbm->SetNumberOfHits(new_cluster_id, number_of_hits);
+      ntbm->SetNinjaPosition(new_cluster_id, ninja_position);
+      ntbm->SetNinjaTangent(new_cluster_id, ninja_tangent);
+      ntbm->SetPlane(new_cluster_id, plane);
+      ntbm->SetSlot(new_cluster_id, slot);
+      ntbm->SetPe(new_cluster_id, pe);      
+    } // itop
+  } // iside
+
+  // Set Corresponding NINJA cluster id list
+  ntbm->SetNumberOfCorrTrackerClusters(itrack, number_of_2d_clusters);
+  ntbm->SetTrackerClusterId(itrack, corr_cluster_id);
 
   return true;
 
@@ -1022,10 +1049,6 @@ int main(int argc, char *argv[]) {
     int nspill = 0;
 
     while ( reader.ReadNextSpill() > 0 ) {
-
-      //if (reader.GetEntryNumber() != 86) continue;
-      if (reader.GetEntryNumber() != 3586 &&
-	  reader.GetEntryNumber() != 3587) continue;
 
       my_ntbm->SetEntryInDailyFile(reader.GetEntryNumber());
 
