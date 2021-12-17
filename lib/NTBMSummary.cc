@@ -249,6 +249,7 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
       if (j != obj.number_of_true_particles_.at(i) - 1) os << ", ";
     }
     os << ")";
+    if (i != obj.number_of_ninja_clusters_ - 1) os << ", ";
   }
   os << "\n"
      << "True position = ";
@@ -257,8 +258,9 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
       for (int j = 0; j < obj.number_of_true_particles_.at(i); j++) {
 	os << j + 1 << " : ( "
 	   << obj.true_position_.at(i).at(j).at(0) << ", "
-	   << obj.true_position_.at(i).at(j).at(1) << ")\n";	
+	   << obj.true_position_.at(i).at(j).at(1) << ")";	
       }
+      if (i != obj.number_of_ninja_clusters_ - 1) os << ", ";
   }
   os << "\n"
      << "True tangent = ";
@@ -267,8 +269,9 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
       for (int j = 0; j < obj.number_of_true_particles_.at(i); j++) {
 	os << j + 1 << " : ( "
 	   << obj.true_tangent_.at(i).at(j).at(0) << ", "
-	   << obj.true_tangent_.at(i).at(j).at(1) << ")\n";	
+	   << obj.true_tangent_.at(i).at(j).at(1) << ")";	
       }
+      if (i != obj.number_of_ninja_clusters_ - 1) os << ", ";
   }
   
   return os;
@@ -371,6 +374,7 @@ void NTBMSummary::SetNumberOfTracks(int number_of_tracks) {
   direction_.resize(number_of_tracks_);
   bunch_.resize(number_of_tracks_);
   number_of_corr_tracker_clusters_.resize(number_of_tracks_);
+  tracker_cluster_id_.resize(number_of_tracks_);
 }
 
 int NTBMSummary::GetNumberOfTracks() const {
@@ -561,7 +565,7 @@ int NTBMSummary::GetBunch(int track) const {
 
 void NTBMSummary::SetNumberOfCorrTrackerClusters(int track, int number_of_corr_tracker_clusters) {
   number_of_corr_tracker_clusters_.at(track) = number_of_corr_tracker_clusters;
-  tracker_cluster_id_.resize(number_of_corr_tracker_clusters_.at(track));
+  tracker_cluster_id_.at(track).resize(number_of_corr_tracker_clusters_.at(track));
 }
 
 int NTBMSummary::GetNumberOfCorrTrackerClusters(int track) const {
