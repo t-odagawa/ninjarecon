@@ -431,6 +431,8 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
 
   std::vector<int> matched_side_cluster_list;
   std::vector<int> matched_top_cluster_list;
+  std::vector<double> side_position_difference_list;
+  std::vector<double> top_position_difference_list;
 
   bool is_match = false;
 
@@ -467,9 +469,11 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
 	switch (view) {
 	case B2View::kSideView :
 	  matched_side_cluster_list.push_back(icluster);
+	  side_position_difference_list.push_back(hit_expected_position.at(view) - ninja_position.at(view));
 	  break;
 	case B2View::kTopView :
 	  matched_top_cluster_list.push_back(icluster);
+	  top_position_difference_list.push_back(hit_expected_position.at(view) - ninja_position.at(view));
 	  break;
 	default :
 	  throw std::invalid_argument("View is not correct");
@@ -506,6 +510,7 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
       std::vector<std::vector<double> > pe(2);
       std::vector<double> ninja_position(2);
       std::vector<double> ninja_tangent(2);
+      std::vector<double> position_difference(2);
 
       for ( int view = 0; view < 2; view++ ) {
 	switch (view) {
@@ -513,6 +518,7 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
 	  number_of_hits.at(view) = ntbm->GetNumberOfHits(matched_side_cluster_list.at(iside), view);
 	  ninja_position.at(view) = ntbm->GetNinjaPosition(matched_side_cluster_list.at(iside)).at(view);
 	  ninja_tangent.at(view) = ntbm->GetNinjaTangent(matched_side_cluster_list.at(iside)).at(view);
+	  position_difference.at(view) = side_position_difference_list.at(iside);
 	  for ( int hit = 0; hit < number_of_hits.at(view); hit++ ) {
 	    plane.at(view).push_back(ntbm->GetPlane(matched_side_cluster_list.at(iside), view, hit));
 	    slot.at(view).push_back(ntbm->GetSlot(matched_side_cluster_list.at(iside), view, hit));
@@ -523,6 +529,7 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
 	  number_of_hits.at(view) = ntbm->GetNumberOfHits(matched_top_cluster_list.at(itop), view);
 	  ninja_position.at(view) = ntbm->GetNinjaPosition(matched_top_cluster_list.at(itop)).at(view);
 	  ninja_tangent.at(view) = ntbm->GetNinjaTangent(matched_top_cluster_list.at(itop)).at(view);
+	  position_difference.at(view) = top_position_difference_list.at(itop);
 	  for ( int hit = 0; hit < number_of_hits.at(view); hit++ ) {
 	    plane.at(view).push_back(ntbm->GetPlane(matched_top_cluster_list.at(itop), view, hit));
 	    slot.at(view).push_back(ntbm->GetSlot(matched_top_cluster_list.at(itop), view, hit));
@@ -535,6 +542,7 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
       ntbm->SetNumberOfHits(new_cluster_id, number_of_hits);
       ntbm->SetNinjaPosition(new_cluster_id, ninja_position);
       ntbm->SetNinjaTangent(new_cluster_id, ninja_tangent);
+      ntbm->SetPositionDifference(new_cluster_id, position_difference);
       ntbm->SetPlane(new_cluster_id, plane);
       ntbm->SetSlot(new_cluster_id, slot);
       ntbm->SetPe(new_cluster_id, pe);      

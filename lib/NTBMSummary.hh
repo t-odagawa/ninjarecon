@@ -248,6 +248,14 @@ public :
 
   double GetNinjaTangentError(int cluster, int view) const;
 
+  void SetPositionDifference(int cluster, int view, double position_difference);
+
+  void SetPositionDifference(int cluster, std::vector<double> position_difference);
+
+  std::vector<double> GetPositionDifference(int cluster) const;
+
+  double GetPositionDifference(int cluster, int view) const;
+
   void SetNumberOfTrueParticles(int cluster, int number_of_true_particles);
 
   int GetNumberOfTrueParticles(int cluster) const;
@@ -369,6 +377,8 @@ private :
   std::vector<std::vector<double>> ninja_tangent_;
   ///> Reconstructed tangent error for track matching
   std::vector<std::vector<double>> ninja_tangent_error_;
+  /// > BM-NT position difference
+  std::vector<std::vector<double>> position_difference_;
   ///> True particle information for MC
   ///> cluster -> true particle -> view(2)
   ///> Noramalization factor from beam MC
@@ -384,7 +394,7 @@ private :
   ///> True tangent
   std::vector<std::vector<std::vector<double>>> true_tangent_;
 
-  ClassDefOverride(NTBMSummary, 13) // NT BM Summary
+  ClassDefOverride(NTBMSummary, 14) // NT BM Summary
 };
 
 #endif

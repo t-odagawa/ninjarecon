@@ -38,7 +38,10 @@ void NTBMSummary::Clear(Option_t *option) {
   pe_.clear();
   bunch_difference_.clear();
   ninja_position_.clear();
+  ninja_position_error_.clear();
   ninja_tangent_.clear();
+  ninja_tangent_error_.clear();
+  position_difference_.clear();
   normalization_ = 1.;
   total_cross_section_ = 1.;
   number_of_true_particles_.clear();
@@ -230,6 +233,13 @@ std::ostream &operator<<(std::ostream &os, const NTBMSummary &obj) {
        << obj.ninja_tangent_error_.at(i).at(0) << ", "
        << obj.ninja_tangent_.at(i).at(1) << " +/- "
        << obj.ninja_tangent_error_.at(i).at(1) << " )\n";
+  }
+  os << "\n"
+     << "Baby MIND-NINJA tracker position difference = ";
+  for (int i = 0; i < obj.number_of_ninja_clusters_; i++) {
+    os << i << " : ( "
+       << obj.position_difference_.at(i).at(0) << ", "
+       << obj.position_difference_.at(i).at(1) << " )\n";
   }
   os << "\n"
      << "Normalization factor = " << obj.normalization_ << "\n"
@@ -605,8 +615,9 @@ void NTBMSummary::SetNumberOfNinjaClusters(int number_of_ninja_clusters) {
   bunch_difference_.resize(number_of_ninja_clusters_);
   ninja_position_.resize(number_of_ninja_clusters_);
   ninja_position_error_.resize(number_of_ninja_clusters_);
-  ninja_tangent_.resize(number_of_ninja_clusters);
+  ninja_tangent_.resize(number_of_ninja_clusters_);
   ninja_tangent_error_.resize(number_of_ninja_clusters_);
+  position_difference_.resize(number_of_ninja_clusters_);
   number_of_true_particles_.resize(number_of_ninja_clusters_);
   true_particle_id_.resize(number_of_ninja_clusters_);
   true_position_.resize(number_of_ninja_clusters_);
@@ -620,6 +631,7 @@ void NTBMSummary::SetNumberOfNinjaClusters(int number_of_ninja_clusters) {
     ninja_position_error_.at(i).resize(2);
     ninja_tangent_.at(i).resize(2);
     ninja_tangent_error_.at(i).resize(2);
+    position_difference_.at(i).resize(2);
   }
 }
 
@@ -871,6 +883,29 @@ double NTBMSummary::GetNinjaTangentError(int cluster, int view) const {
   if (view >= NUMBER_OF_VIEWS)
     throw std::out_of_range("View out of range");
   return GetNinjaTangentError(cluster).at(view);
+}
+
+void NTBMSummary::SetPositionDifference(int cluster, int view, double position_difference) {
+  if (view >= NUMBER_OF_VIEWS)
+    throw std::out_of_range("View out of range");
+  position_difference_.at(cluster).at(view) = position_difference;
+}
+
+void NTBMSummary::SetPositionDifference(int cluster, std::vector<double> position_difference) {
+  for (std::size_t view = 0; view < NUMBER_OF_VIEWS; view++)
+    SetPositionDifference(cluster, view, position_difference.at(view));
+}
+
+std::vector<double> NTBMSummary::GetPositionDifference(int cluster) const {
+  if (cluster >= number_of_ninja_clusters_)
+    throw std::out_of_range("Number of cluster out of range");
+  return position_difference_.at(cluster);
+}
+
+double NTBMSummary::GetPositionDifference(int cluster, int view) const {
+  if (view >= NUMBER_OF_VIEWS)
+    throw std::out_of_range("View out of range");
+  return GetPositionDifference(cluster).at(view);
 }
 
 void NTBMSummary::SetNumberOfTrueParticles(int cluster, int number_of_true_particles) {
