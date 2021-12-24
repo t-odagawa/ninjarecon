@@ -60,9 +60,9 @@ bool CompareBabyMindHitsInOneTrack(const B2HitSummary* lhs, const B2HitSummary *
     return lhs->GetView() < rhs->GetView();
   if ( lhs->GetPlane() != rhs->GetPlane() )
     return lhs->GetPlane() < rhs->GetPlane();
-  if ( lhs->GetSlot().GetValue(lhs->GetSingleReadout()) != rhs->GetSlot().GetValue(rhs->GetSingleReadout()) )
-    return lhs->GetSlot().GetValue(lhs->GetSingleReadout())
-      < rhs->GetSlot().GetValue(rhs->GetSingleReadout());
+  if ( lhs->GetSlot().GetValue(lhs->GetReadout1()) != rhs->GetSlot().GetValue(rhs->GetReadout1()) )
+    return lhs->GetSlot().GetValue(lhs->GetReadout1())
+      < rhs->GetSlot().GetValue(rhs->GetReadout1());
 }
 
 // NINJA cluster creation
@@ -109,11 +109,11 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
 
     number_of_hits_tmp.at(ninja_hit->GetView())++;
     plane_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetPlane());
-    slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()));
+    slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1()));
     if ( ninja_hit->GetBunch() == 0 )
-      pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetSingleReadout()));
+      pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetReadout1()));
     else 
-      pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetTimeNs().GetValue(ninja_hit->GetSingleReadout()));
+      pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetTimeNs().GetValue(ninja_hit->GetReadout1()));
     
     // create a new NINJA cluster
     if ( ( ( ihit < ninja_hits.size() - 1 ) && 
@@ -244,11 +244,11 @@ std::vector<std::vector<std::vector<std::vector<double> > > > GenerateMergedPosi
 
     int view = hit->GetView();
     int plane = hit->GetPlane();
-    int channel = hit->GetSlot().GetValue(hit->GetSingleReadout());
+    int channel = hit->GetSlot().GetValue(hit->GetReadout1());
     BOOST_LOG_TRIVIAL(trace) << "Detector : " << DETECTOR_NAMES.at(hit->GetDetectorId()) << ", "
 			     << "View : "     << VIEW_NAMES.at(hit->GetView()) << ", "
 			     << "Plane : "    << hit->GetPlane() << ", "
-			     << "Channel : "  << hit->GetSlot().GetValue(hit->GetSingleReadout());
+			     << "Channel : "  << hit->GetSlot().GetValue(hit->GetReadout1());
 
     const TVector3 &pos = hit->GetScintillatorPosition().GetValue();
 
@@ -969,8 +969,8 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
 	ntbm_summary->SetMomentumType(itrack, 0); // Baby MIND range method
       else 
 	ntbm_summary->SetMomentumType(itrack, 1); // should be curvature type but not yet validated
-      ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
-      ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
+      ntbm_summary->SetMomentum(itrack, track->GetReconMomByRange());
+      ntbm_summary->SetMomentumError(itrack, track->GetReconMomByCurve());
       std::vector<Double_t> direction_and_position = GetBabyMindInitialDirectionAndPosition(track, datatype);
       for (int view = 0; view < 2; view++) {
 	ntbm_summary->SetBabyMindPosition(itrack, view, direction_and_position.at(view+2));
@@ -1074,17 +1074,17 @@ int main(int argc, char *argv[]) {
       while ( const auto *ninja_hit = it_hit.Next() ) {
 	if ( ninja_hit->GetDetectorId() == B2Detector::kNinja ) {
 	  if ( B2Dimension::CheckDeadChannel(B2Detector::kNinja, ninja_hit->GetView(),
-					     ninja_hit->GetSingleReadout(), ninja_hit->GetPlane(),
-					     ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout())) )
+					     ninja_hit->GetReadout1(), ninja_hit->GetPlane(),
+					     ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1())) )
 	    continue;
 
 	  if ( ninja_hit->GetView() == B2View::kTopView &&
 	       ninja_hit->GetPlane() == 0 &&
-	       ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()) == 25 &&
-	       ninja_hit->GetHighGainPeu(ninja_hit->GetSingleReadout()) < 3.5 )
+	       ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1()) == 25 &&
+	       ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 )
 	    continue; // noisy channel
-	  // if ( ninja_hit->GetHighGainPeu(ninja_hit->GetSingleReadout()) < 3.5 )
-	  if ( ninja_hit->GetHighGainPeu(ninja_hit->GetSingleReadout()) < 2.5 )
+	  // if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 )
+	  if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 2.5 )
 	    continue;
 
 	  ninja_hits.push_back(ninja_hit);
@@ -1145,6 +1145,8 @@ int main(int argc, char *argv[]) {
 		track_level_list.push_back(track_level);
 	      }
 	      else {
+		BOOST_LOG_TRIVIAL(info) << "Multi Baby MIND track : "
+					<< reader.GetEntryNumber();
 		int same_track_index = std::distance(cluster_id_list.begin(), same_track);
 		if ( track_level_list.at(same_track_index) < track_level ) {
 		  track_level_list.at(same_track_index) = track_level;
