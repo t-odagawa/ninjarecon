@@ -1,5 +1,6 @@
 // system includes
 #include <vector>
+#include <map>
 #include <numeric>
 #include <algorithm>
 #include <iostream>
@@ -545,7 +546,8 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
       ntbm->SetPositionDifference(new_cluster_id, position_difference);
       ntbm->SetPlane(new_cluster_id, plane);
       ntbm->SetSlot(new_cluster_id, slot);
-      ntbm->SetPe(new_cluster_id, pe);      
+      ntbm->SetPe(new_cluster_id, pe);
+
     } // itop
   } // iside
 
@@ -1022,6 +1024,56 @@ int GetTrackLevel(const B2TrackSummary *track_summary) {
   else throw std::invalid_argument("Track Summary is completely invalid");
 }
 
+void SetHitSummaryInfo(B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary, std::map<int, B2TrackSummary*> map) {
+
+  Int_t bunch_difference = -1;
+  std::vector<UInt_t > assigned_hit_id;
+  // set bunch for matched hits
+  for ( int icluster = 0; icluster < ntbm_summary->GetNumberOfNinjaClusters(); icluster++ ) {
+    if ( ntbm_summary->GetBabyMindTrackId(icluster) == -1 ) continue;
+    auto track = map.at(ntbm_summary->GetBabyMindTrackId(icluster));
+    for ( int iview = 0; iview < 2; iview++ ) {
+      for ( int ihit = 0; ihit < ntbm_summary->GetNumberOfHits(icluster, iview); ihit++ ) {
+	auto it_hit = spill_summary.BeginHit();
+	while ( auto *hit = it_hit.Next() ) { 
+	  if ( hit->GetDetectorId() == B2Detector::kNinja &&
+	       hit->GetView() == iview &&
+	       hit->GetPlane() == ntbm_summary->GetPlane(icluster, iview, ihit) &&
+	       hit->GetSlot().GetValue(hit->GetReadout1()) == ntbm_summary->GetSlot(icluster, iview, ihit) &&
+	       std::find(assigned_hit_id.begin(), assigned_hit_id.end(), hit->GetHitId()) == assigned_hit_id.end() ) {
+	    track->AddHit(hit);
+	    bunch_difference = ntbm_summary->GetBunch(ntbm_summary->GetBabyMindTrackId(icluster))
+	      - hit->GetBunch();
+	    hit->SetBunch(ntbm_summary->GetBunch(ntbm_summary->GetBabyMindTrackId(icluster)));
+	    assigned_hit_id.push_back(hit->GetHitId());
+	    break;
+	  } // fi
+	} // while
+      } // hit loop
+    } // view loop
+  } // cluster loop
+
+  // set bunch for unmatched hits
+  for ( int icluster = 0; icluster < ntbm_summary->GetNumberOfNinjaClusters(); icluster++ ) {
+    if ( ntbm_summary->GetBabyMindTrackId(icluster) >= 0 ) continue;
+    for ( int iview = 0; iview < 2; iview++ ) {
+      for ( int ihit = 0; ihit < ntbm_summary->GetNumberOfHits(icluster, iview); ihit++ ) {
+	auto it_hit = spill_summary.BeginHit();
+	while ( auto *hit = it_hit.Next() ) {
+	  if ( hit->GetDetectorId() != B2Detector::kNinja ) continue;
+	  if ( std::find(assigned_hit_id.begin(), assigned_hit_id.end(), hit->GetHitId()) == assigned_hit_id.end()) {
+	    if ( hit->GetBunch() + bunch_difference <= 8 )
+	      hit->SetBunch(hit->GetBunch() + bunch_difference);
+	    else hit->SetBunch(B2_NON_INITIALIZED_VALUE);
+	    assigned_hit_id.push_back(hit->GetHitId());
+	  }
+	} // while
+      } // hit loop
+    } // view loop
+  } // cluster loop
+
+}
+
 // main
 
 int main(int argc, char *argv[]) {
@@ -1037,9 +1089,9 @@ int main(int argc, char *argv[]) {
 
   BOOST_LOG_TRIVIAL(info) << "==========NINJA Track Matching Start==========";
 
-  if ( argc != 5 ) {
+  if ( argc != 6 ) {
     BOOST_LOG_TRIVIAL(error) << "Usage : " << argv[0]
-			     << " <input B2 file path> <output NTBM file path> <z shift> <MC(0)/data(1)>";
+			     << " <input B2 file path> <output NTBM file path> <outpu B2 file path> <z shift> <MC(0)/data(1)>";
     std::exit(1);
   }
 
@@ -1051,8 +1103,10 @@ int main(int argc, char *argv[]) {
     NTBMSummary* my_ntbm = nullptr;
     ntbm_tree->Branch("NTBMSummary", &my_ntbm);
 
-    double z_shift = std::stof(argv[3]);
-    int datatype = std::stoi(argv[4]);
+    B2Writer writer(argv[3], reader);
+
+    double z_shift = std::stof(argv[4]);
+    int datatype = std::stoi(argv[5]);
 
     int nspill = 0;
 
@@ -1060,16 +1114,16 @@ int main(int argc, char *argv[]) {
 
       my_ntbm->SetEntryInDailyFile(reader.GetEntryNumber());
 
-      auto &input_spill_summary = reader.GetSpillSummary();
-      int timestamp = input_spill_summary.GetBeamSummary().GetTimestamp();
+      auto &spill_summary = writer.GetSpillSummary();
+      int timestamp = spill_summary.GetBeamSummary().GetTimestamp();
       BOOST_LOG_TRIVIAL(debug) << "entry : " << reader.GetEntryNumber();
       BOOST_LOG_TRIVIAL(debug) << "timestamp : " << timestamp;
  
-      TransferBeamInfo(input_spill_summary, my_ntbm);
-      TransferMCInfo(input_spill_summary, my_ntbm);
+      TransferBeamInfo(spill_summary, my_ntbm);
+      TransferMCInfo(spill_summary, my_ntbm);
 
       // Collect all NINJA hits
-      auto it_hit = input_spill_summary.BeginHit();
+      auto it_hit = spill_summary.BeginHit();
       std::vector<const B2HitSummary* > ninja_hits;
       while ( const auto *ninja_hit = it_hit.Next() ) {
 	if ( ninja_hit->GetDetectorId() == B2Detector::kNinja ) {
@@ -1083,7 +1137,6 @@ int main(int argc, char *argv[]) {
 	       ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1()) == 25 &&
 	       ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 )
 	    continue; // noisy channel
-	  // if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 )
 	  if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 2.5 )
 	    continue;
 
@@ -1099,14 +1152,16 @@ int main(int argc, char *argv[]) {
       }
 
       // Collect all BM 3d tracks
+      int track_id = 0;
       std::vector<int> track_id_list;
       std::vector<int> track_level_list;
       std::vector<std::array<int, 2> > cluster_id_list;
+      std::map<int, B2TrackSummary*> track_id_map;
 
-      auto it_recon_vertex = input_spill_summary.BeginReconVertex();
+      auto it_recon_vertex = spill_summary.BeginReconVertex();
       while ( auto *vertex = it_recon_vertex.Next() ) {
 	auto it_outgoing_track = vertex->BeginTrack();
-	while ( const auto *track = it_outgoing_track.Next() ) {
+	while ( auto *track = it_outgoing_track.Next() ) {
 	  if ( track->GetTrackType() != B2TrackType::kPrimaryTrack ) continue; // only consider primary track
 	  BOOST_LOG_TRIVIAL(trace) << track->GetTrackId();
 	  auto it_cluster = track->BeginCluster();
@@ -1156,6 +1211,8 @@ int main(int argc, char *argv[]) {
 	      }
 	    }
 	  }
+	  track_id_map.insert(std::make_pair(track_id, track));
+	  track_id++;
 	} // track
       } // vertex
 
@@ -1172,7 +1229,7 @@ int main(int argc, char *argv[]) {
       // and get the best cluster to match each BabyMIND track
       if ( track_id_list.size() > 0 ) {
 
-	TransferBabyMindTrackInfo(input_spill_summary, my_ntbm, track_id_list, datatype);
+	TransferBabyMindTrackInfo(spill_summary, my_ntbm, track_id_list, datatype);
 
 	int start_bunch = 0; // bunch id (1-8) corresponds to NINJA tracker ADC triggered timing
 	int bunch_difference = -1; // difference between the bunch in interest and the start_bunch
@@ -1198,13 +1255,16 @@ int main(int argc, char *argv[]) {
 	ReconstructNinjaPosition(my_ntbm); // use reconstructed tangent info
 	if ( datatype == B2DataType::kMonteCarlo &&
 	     my_ntbm->GetNumberOfNinjaClusters() > 0 )
-	  SetTruePositionAngle(input_spill_summary, my_ntbm);
+	  SetTruePositionAngle(spill_summary, my_ntbm);
       }
       
+      SetHitSummaryInfo(spill_summary, my_ntbm, track_id_map);
+
       // Create output tree
       BOOST_LOG_TRIVIAL(debug) << *my_ntbm;
       ntbm_tree->Fill();
       my_ntbm->Clear("C");
+      writer.Fill();
     }
 
     ntbm_file->cd();

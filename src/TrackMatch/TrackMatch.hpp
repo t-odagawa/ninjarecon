@@ -2,6 +2,7 @@
 #define NINJARECON_TRACKMATCH_HPP
 
 #include <vector>
+#include <map>
 
 #include <TCanvas.h>
 
@@ -202,5 +203,7 @@ void TransferBabyMindTrackInfo(const B2SpillSummary& spill_summary, NTBMSummary 
 void TransferMCInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary);
 
 int GetTrackLevel(const B2TrackSummary* track_summary);
+
+void SetHitSummaryInfo(B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary, std::map<int, B2TrackSummary*> map);
 
 #endif
