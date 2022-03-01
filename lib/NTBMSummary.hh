@@ -377,7 +377,7 @@ private :
   std::vector<std::vector<double>> ninja_tangent_;
   ///> Reconstructed tangent error for track matching
   std::vector<std::vector<double>> ninja_tangent_error_;
-  /// > BM-NT position difference
+  ///> BM-NT position difference
   std::vector<std::vector<double>> position_difference_;
   ///> True particle information for MC
   ///> cluster -> true particle -> view(2)

@@ -865,10 +865,11 @@ void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm
   TVector3 true_direction;
   bool found_true_muon_in_tss = false;
   while (const auto *emulsion = it_emulsion.Next()) {
+    if ( emulsion->GetParentTrackId() == 0 ) continue;
     if ( emulsion->GetParentTrackId() >= primary_vertex_summary.GetNumOutgoingTracks() )
       continue;
     // Get position of TSS downstream film position
-    if (emulsion->GetFilmType() == B2EmulsionType::kShifter && emulsion->GetPlate() == 17) {
+    if ( emulsion->GetFilmType() == B2EmulsionType::kShifter && emulsion->GetPlate() == 17 ) {
       int particle_id = emulsion->GetParentTrack().GetParticlePdg();
       if (!B2Pdg::IsMuonPlusOrMinus(particle_id)) continue;
       true_position = emulsion->GetAbsolutePosition().GetValue();
@@ -882,9 +883,9 @@ void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm
       break;
     }
   }
-
+  
   if ( !found_true_muon_in_tss ) return;
-
+  
   std::vector<double> true_ninja_position;
   true_ninja_position.resize(2);
   true_ninja_position.at(B2View::kSideView) = true_position.Y();
@@ -893,7 +894,7 @@ void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm
   true_ninja_tangent.resize(2);
   true_ninja_tangent.at(B2View::kSideView) = true_direction.Y();
   true_ninja_tangent.at(B2View::kTopView) = true_direction.X();
-
+  
   for ( int icluster = 0; icluster < ntbm_summary->GetNumberOfNinjaClusters(); icluster++ ) {
     if ( ntbm_summary->GetNumberOfHits(icluster, B2View::kSideView) > 0 &&
 	 ntbm_summary->GetNumberOfHits(icluster, B2View::kTopView) > 0 ) {
@@ -905,7 +906,7 @@ void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm
       ntbm_summary->SetNumberOfTrueParticles(icluster, 0);
     }
   }
-
+  
 }
 
 // Transfer B2Summary information
@@ -1091,7 +1092,7 @@ int main(int argc, char *argv[]) {
 
   if ( argc != 6 ) {
     BOOST_LOG_TRIVIAL(error) << "Usage : " << argv[0]
-			     << " <input B2 file path> <output NTBM file path> <outpu B2 file path> <z shift> <MC(0)/data(1)>";
+			     << " <input B2 file path> <output NTBM file path> <output B2 file path> <z shift> <MC(0)/data(1)>";
     std::exit(1);
   }
 
