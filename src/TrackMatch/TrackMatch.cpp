@@ -60,9 +60,14 @@ bool CompareBabyMindHitsInOneTrack(const B2HitSummary* lhs, const B2HitSummary *
     return lhs->GetView() < rhs->GetView();
   if ( lhs->GetPlane() != rhs->GetPlane() )
     return lhs->GetPlane() < rhs->GetPlane();
+  if ( lhs->GetSlot().GetValue(lhs->GetReadout1()) != rhs->GetSlot().GetValue(rhs->GetReadout1()) ) 
+    return lhs->GetSlot().GetValue(lhs->GetReadout1())
+      < rhs->GetSlot().GetValue(rhs->GetReadout1());
+  /*
   if ( lhs->GetSlot().GetValue(lhs->GetSingleReadout()) != rhs->GetSlot().GetValue(rhs->GetSingleReadout()) )
     return lhs->GetSlot().GetValue(lhs->GetSingleReadout())
       < rhs->GetSlot().GetValue(rhs->GetSingleReadout());
+  */ // for old version
 }
 
 // NINJA cluster creation
@@ -109,11 +114,11 @@ void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
 
     number_of_hits_tmp.at(ninja_hit->GetView())++;
     plane_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetPlane());
-    slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()));
+    slot_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1()));
     if ( ninja_hit->GetBunch() == 0 )
-      pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetSingleReadout()));
+      pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetHighGainPeu().GetValue(ninja_hit->GetReadout1()));
     else 
-      pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetTimeNs().GetValue(ninja_hit->GetSingleReadout()));
+      pe_tmp.at(ninja_hit->GetView()).push_back(ninja_hit->GetTimeNs().GetValue(ninja_hit->GetReadout1()));
     
     // create a new NINJA cluster
     if ( ( ( ihit < ninja_hits.size() - 1 ) && 
@@ -244,11 +249,11 @@ std::vector<std::vector<std::vector<std::vector<double> > > > GenerateMergedPosi
 
     int view = hit->GetView();
     int plane = hit->GetPlane();
-    int channel = hit->GetSlot().GetValue(hit->GetSingleReadout());
+    int channel = hit->GetSlot().GetValue(hit->GetReadout1());
     BOOST_LOG_TRIVIAL(trace) << "Detector : " << DETECTOR_NAMES.at(hit->GetDetectorId()) << ", "
 			     << "View : "     << VIEW_NAMES.at(hit->GetView()) << ", "
 			     << "Plane : "    << hit->GetPlane() << ", "
-			     << "Channel : "  << hit->GetSlot().GetValue(hit->GetSingleReadout());
+			     << "Channel : "  << hit->GetSlot().GetValue(hit->GetReadout1());
 
     const TVector3 &pos = hit->GetScintillatorPosition().GetValue();
 
@@ -455,7 +460,7 @@ bool MatchBabyMindTrack(NTBMSummary* ntbm, int itrack, int &bunch_diff, double z
       if ( number_of_hits.at(B2View::kTopView) > 0 ) {
 	if ( number_of_hits.at(B2View::kSideView) > 0 ) continue;
 	else view = B2View::kTopView;
-      } else if ( number_of_hits.at(B2View::kSideView > 0) ) {
+      } else if ( number_of_hits.at(B2View::kSideView) > 0 ) {
 	view = B2View::kSideView;
       } else {
 	BOOST_LOG_TRIVIAL(error) << "Cluster with no hit : "
@@ -928,18 +933,23 @@ void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary 
 	ntbm_summary->SetCharge(itrack, -1);
       ntbm_summary->SetBunch(itrack, track->GetBunch());
       
-      if ( track->GetIsStopping() )
+      TVector3 final_position = track->GetFinalPosition().GetValue();
+      if ( std::fabs(final_position.X()) < 1300. &&
+	   std::fabs(final_position.Y()) < 950. &&
+	   final_position.Z() < 1800. ) {
+	//      if ( track->GetIsStopping() ) 
 	ntbm_summary->SetMomentumType(itrack, 0); // Baby MIND range method
-      else 
+      }
+      else {
 	ntbm_summary->SetMomentumType(itrack, 1); // should be curvature type but not yet implemented
-      ntbm_summary->SetMomentum(itrack, track->GetFinalAbsoluteMomentum().GetValue());
-      ntbm_summary->SetMomentumError(itrack, track->GetFinalAbsoluteMomentum().GetError());
+      }
+      ntbm_summary->SetMomentum(itrack, track->GetReconMomByRange());
+      ntbm_summary->SetMomentumError(itrack, track->GetReconMomByCurve());
       std::vector<Double_t> direction_and_position = GetBabyMindInitialDirectionAndPosition(track, datatype);
       for (int view = 0; view < 2; view++) {
 	ntbm_summary->SetBabyMindPosition(itrack, view, direction_and_position.at(view+2));
 	ntbm_summary->SetBabyMindTangent(itrack, view, direction_and_position.at(view));
       }
-      
       itrack++;
       
     } // while track
@@ -998,7 +1008,8 @@ int main(int argc, char *argv[]) {
       BOOST_LOG_TRIVIAL(debug) << "timestamp : " << timestamp;
  
       TransferBeamInfo(input_spill_summary, my_ntbm);
-      TransferMCInfo(input_spill_summary, my_ntbm);
+      if ( datatype == B2DataType::kMonteCarlo)
+	TransferMCInfo(input_spill_summary, my_ntbm);
 
       // Collect all NINJA hits
       auto it_hit = input_spill_summary.BeginHit();
@@ -1006,17 +1017,17 @@ int main(int argc, char *argv[]) {
       while ( const auto *ninja_hit = it_hit.Next() ) {
 	if ( ninja_hit->GetDetectorId() == B2Detector::kNinja ) {
 	  if ( B2Dimension::CheckDeadChannel(B2Detector::kNinja, ninja_hit->GetView(),
-					     ninja_hit->GetSingleReadout(), ninja_hit->GetPlane(),
-					     ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout())) )
+					     ninja_hit->GetReadout1(), ninja_hit->GetPlane(),
+					     ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1())) )
 	    continue;
 
 	  if ( ninja_hit->GetView() == B2View::kTopView &&
 	       ninja_hit->GetPlane() == 0 &&
-	       ninja_hit->GetSlot().GetValue(ninja_hit->GetSingleReadout()) == 25 &&
-	       ninja_hit->GetHighGainPeu(ninja_hit->GetSingleReadout()) < 3.5 )
+	       ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1()) == 25 &&
+	       ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 )
 	    continue; // noisy channel
-	  // if ( ninja_hit->GetHighGainPeu(ninja_hit->GetSingleReadout()) < 3.5 )
-	  if ( ninja_hit->GetHighGainPeu(ninja_hit->GetSingleReadout()) < 2.5 )
+	  // if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 )
+	  if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 2.5 )
 	    continue;
 
 	  ninja_hits.push_back(ninja_hit);
