@@ -860,12 +860,11 @@ void TransferBabyMindTrackInfo(std::vector<const B2TrackSummary* > tracks,
 	  ntbm_summary->SetNinjaTrackType(itrack, 1); // sand muon from wall
 	}
       }
-      else if ( vertex.GetDetector() == B2Detector::kWagasciUpstream ||
-		vertex.GetDetector() == B2Detector::kWagasciDownstream ) {
+      else if ( vertex.GetDetector() == B2Detector::kWagasciUpstream ) {
 	auto position = vertex.GetRelativePosition().GetValue();
 	if ( std::fabs(position.X()) < 425. &&
 	     std::fabs(position.Y()) < 425. &&
-	     95. < position.Z() && position.Z() < 310. ) {
+	     -155. < position.Z() && position.Z() < 60. ) {
 	  ntbm_summary->SetNinjaTrackType(itrack, 2);
 	}
 	else {
@@ -873,7 +872,7 @@ void TransferBabyMindTrackInfo(std::vector<const B2TrackSummary* > tracks,
 	}
       }
       else {
-	ntbm_summary->SetNinjaTrackType(itrack, 0);
+	ntbm_summary->SetNinjaTrackType(itrack, 0); // downstream is not reliable
       }
     }
 

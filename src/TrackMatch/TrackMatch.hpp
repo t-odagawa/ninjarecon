@@ -199,4 +199,7 @@ void TransferBabyMindTrackInfo(const B2SpillSummary& spill_summary, NTBMSummary 
  */
 void TransferMCInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary);
 
+void SetHitSummaryInfo(B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary,
+		       std::map<int, B2TrackSummary* > map);
+
 #endif
