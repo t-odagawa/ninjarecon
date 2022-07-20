@@ -1036,10 +1036,12 @@ int main(int argc, char *argv[]) {
 	  bunch_difference = my_ntbm->GetBunch(ibmtrack) - start_bunch;
 	if ( NinjaHitExpected(my_ntbm, ibmtrack, 0.) && // Extrapolated position within the tracker area
 	     bunch_difference < 7 ) { // Multi hit TDC range
-	  if ( start_bunch == 0 ) {
-	    start_bunch = my_ntbm->GetBunch(ibmtrack) - bunch_difference;
-	    BOOST_LOG_TRIVIAL(debug) << "This is the first matching : "
-				     << "start bunch = " << start_bunch;
+	  if ( MatchBabyMindTrack(my_ntbm, ibmtrack, bunch_difference, 0.) ) {
+	    if ( start_bunch == 0 ) {
+	      start_bunch = my_ntbm->GetBunch(ibmtrack) - bunch_difference;
+	      BOOST_LOG_TRIVIAL(debug) << "This is the first matching : "
+				       << "start bunch = " << start_bunch;
+	    }
 	  }
 	}
       } // ibmtrack
