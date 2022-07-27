@@ -844,6 +844,7 @@ void TransferBabyMindTrackInfo(std::vector<const B2TrackSummary* > tracks,
   int itrack = 0;
 
   for ( auto *track : tracks ) {
+
     if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) {
       ntbm_summary->SetNinjaTrackType(itrack, 0); // ECC interaction candidate (or sand muon)
     }
@@ -918,6 +919,8 @@ int main(int argc, char *argv[]) {
   logging::core::get()->set_filter
     (
      logging::trivial::severity >= logging::trivial::info
+     //logging::trivial::severity >= logging::trivial::trace
+     //logging::trivial::severity >= logging::trivial::debug
      );
 
   BOOST_LOG_TRIVIAL(info) << "===========NINJA Track Matching Start==========";
@@ -937,7 +940,7 @@ int main(int argc, char *argv[]) {
   ntbm_tree->Branch("NTBMSummary", &my_ntbm);
 
   while ( reader.ReadNextSpill() > 0 ) {
-
+    
     reader4.ReadSpill(reader.GetEntryNumber());
 
     my_ntbm->SetEntryInDailyFile(reader.GetEntryNumber());
@@ -989,35 +992,32 @@ int main(int argc, char *argv[]) {
     // Collect all BM 3d tracks
     std::vector<const B2TrackSummary* > bm_recon_tracks;
     
-    // track type != 4
-    auto it_recon_vertex = input_spill_summary.BeginReconVertex();
-    while ( auto *vertex = it_recon_vertex.Next() ) {
-      auto it_outgoing_track = vertex->BeginTrack();
-      while ( const auto *track = it_outgoing_track.Next() ) {
-	if ( track->GetTrackType() != B2TrackType::kPrimaryTrack ) continue;
-	if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) continue;
-	if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kMatchingTrack &&
-	     track->HasDetector(B2Detector::kBabyMind) ) {
-	  if ( track->HasDetector(B2Detector::kProtonModule) ||
-	       track->HasDetector(B2Detector::kWagasciUpstream) ||
-	       track->HasDetector(B2Detector::kWagasciDownstream) ) {
-	    bm_recon_tracks.push_back(track);
-	  }
+    // track type != 4    
+    auto it_recon_track = input_spill_summary.BeginReconTrack();
+    while ( const auto *track = it_recon_track.Next() ) {
+      if ( track->GetTrackType() != B2TrackType::kPrimaryTrack ) continue;
+      if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) continue;
+      if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kMatchingTrack &&
+	   track->HasDetector(B2Detector::kBabyMind) ) {
+	if ( track->HasDetector(B2Detector::kProtonModule) ||
+	     track->HasDetector(B2Detector::kWagasciUpstream) ||
+	     track->HasDetector(B2Detector::kWagasciDownstream) ) {
+	  BOOST_LOG_TRIVIAL(trace) << "Matching track : " << *track;
+	  std::cout << track->GetTrackLengthTotal() << std::endl;
+	  bm_recon_tracks.push_back(track);
 	}
-      }
+      }      
     }
 
     // track type == 4
-    auto it_recon_vertex4 = input_spill_summary4.BeginReconVertex();
-    while ( auto *vertex = it_recon_vertex4.Next() ) {
-      auto it_outgoing_track = vertex->BeginTrack();
-      while ( const auto *track = it_outgoing_track.Next() ) {
-	if ( track->GetTrackType() != B2TrackType::kPrimaryTrack ) continue;
-	if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) {
-	  bm_recon_tracks.push_back(track);
-	}
-	else continue;
+    auto it_recon_track4 = input_spill_summary4.BeginReconTrack();
+    while ( const auto *track = it_recon_track4.Next() ) {
+      if ( track->GetTrackType() != B2TrackType::kPrimaryTrack ) continue;
+      if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) {
+	BOOST_LOG_TRIVIAL(trace) << "Non-matching track : " << *track;
+	bm_recon_tracks.push_back(track);
       }
+      else continue;
     }
 
     my_ntbm->SetNumberOfTracks(bm_recon_tracks.size());
