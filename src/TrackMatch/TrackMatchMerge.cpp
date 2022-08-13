@@ -32,7 +32,7 @@
 #include <B2Pdg.hh>
 #include "NTBMSummary.hh"
 
-#include "TrackMatch.hpp"
+#include "TrackMatchMerge.hpp"
 
 namespace logging = boost::log;
 
@@ -63,11 +63,13 @@ bool CompareBabyMindHitsInOneTrack(const B2HitSummary* lhs, const B2HitSummary *
   if ( lhs->GetSlot().GetValue(lhs->GetReadout1()) != rhs->GetSlot().GetValue(rhs->GetReadout1()) ) 
     return lhs->GetSlot().GetValue(lhs->GetReadout1())
       < rhs->GetSlot().GetValue(rhs->GetReadout1());
-  /*
-  if ( lhs->GetSlot().GetValue(lhs->GetSingleReadout()) != rhs->GetSlot().GetValue(rhs->GetSingleReadout()) )
-    return lhs->GetSlot().GetValue(lhs->GetSingleReadout())
-      < rhs->GetSlot().GetValue(rhs->GetSingleReadout());
-  */ // for old version
+}
+
+bool CompareBMReconTracksToMatch(const B2TrackSummary* lhs, const B2TrackSummary* rhs) {
+  if ( lhs->GetBunch() != rhs->GetBunch() )
+    return lhs->GetBunch() < rhs->GetBunch();
+  if ( lhs->GetPrimaryTrackType() != rhs->GetPrimaryTrackType() )
+    return lhs->GetPrimaryTrackType() < rhs->GetPrimaryTrackType();
 }
 
 // NINJA cluster creation
@@ -820,61 +822,6 @@ void ReconstructNinjaPosition(NTBMSummary* ntbm) {
   
 }
 
-void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary) {
-
-  auto it_event = spill_summary.BeginTrueEvent();
-  const auto *event = it_event.Next();
-  auto &primary_vertex_summary = event->GetPrimaryVertex();
-
-  auto it_emulsion = spill_summary.BeginEmulsion();
-  TVector3 true_position;
-  TVector3 true_direction;
-  bool found_true_muon_in_tss = false;
-  while (const auto *emulsion = it_emulsion.Next()) {
-    if ( emulsion->GetParentTrackId() == 0 ) continue;
-    if ( emulsion->GetParentTrackId() >= primary_vertex_summary.GetNumOutgoingTracks() )
-      continue;
-    // Get position of TSS downstream film position
-    if (emulsion->GetFilmType() == B2EmulsionType::kShifter && emulsion->GetPlate() == 17) {
-      int particle_id = emulsion->GetParentTrack().GetParticlePdg();
-      if (!B2Pdg::IsMuonPlusOrMinus(particle_id)) continue;
-      true_position = emulsion->GetAbsolutePosition().GetValue();
-      true_direction = emulsion->GetTangent().GetValue();
-      true_position.SetX(true_position.X() + true_direction.X() * (NINJA_TSS_ATTACH_AC_THICK + 30.4)
-			 - NINJA_POS_X - NINJA_TRACKER_POS_X);
-      true_position.SetY(true_position.Y() + true_direction.Y() * (NINJA_TSS_ATTACH_AC_THICK + 10.4)
-			 - NINJA_POS_Y - NINJA_TRACKER_POS_Y);
-      true_position.SetZ(true_position.Z() - NINJA_POS_Z - NINJA_TRACKER_POS_Z);
-      found_true_muon_in_tss = true;
-      break;
-    }
-  }
-
-  if ( !found_true_muon_in_tss ) return;
-
-  std::vector<double> true_ninja_position;
-  true_ninja_position.resize(2);
-  true_ninja_position.at(B2View::kSideView) = true_position.Y();
-  true_ninja_position.at(B2View::kTopView) = true_position.X();
-  std::vector<double> true_ninja_tangent;
-  true_ninja_tangent.resize(2);
-  true_ninja_tangent.at(B2View::kSideView) = true_direction.Y();
-  true_ninja_tangent.at(B2View::kTopView) = true_direction.X();
-
-  for ( int icluster = 0; icluster < ntbm_summary->GetNumberOfNinjaClusters(); icluster++ ) {
-    if ( ntbm_summary->GetNumberOfHits(icluster, B2View::kSideView) > 0 &&
-	 ntbm_summary->GetNumberOfHits(icluster, B2View::kTopView) > 0 ) {
-      ntbm_summary->SetNumberOfTrueParticles(icluster, 1);
-      ntbm_summary->SetTrueParticleId(icluster, 0, (int)PDG_t::kMuonMinus);
-      ntbm_summary->SetTruePosition(icluster, 0, true_ninja_position);
-      ntbm_summary->SetTrueTangent(icluster, 0, true_ninja_tangent);
-    } else {
-      ntbm_summary->SetNumberOfTrueParticles(icluster, 0);
-    }
-  }
-
-}
-
 // Transfer B2Summary information
 
 void TransferBeamInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summary) {
@@ -1013,156 +960,93 @@ double MyFuncCalculateTrackLength(const B2TrackSummary* track, double ax, double
 
 }
 
-void TransferBabyMindTrackInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summary, int datatype,
+void TransferBabyMindTrackInfo(std::vector<const B2TrackSummary* > tracks,
+			       NTBMSummary *ntbm_summary,
 			       B2Dimension &dimension) {
-  
+
   int itrack = 0;
 
-  auto it_recon_vertex = spill_summary.BeginReconVertex();
-  while ( auto *vertex = it_recon_vertex.Next() ) {
-    auto it_outgoing_track = vertex->BeginTrack();
-    while ( auto *track = it_outgoing_track.Next() ) {
-      if ( track->GetTrackType() == B2TrackType::kPrimaryTrack ) {
-	if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) {
-	  ntbm_summary->SetNinjaTrackType(itrack, 0); // ECC interaction candidate (or sand muon)
-	} else if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kMatchingTrack &&
-		    track->HasDetector(B2Detector::kBabyMind) ) {
-	  auto vertex = track->GetParentVertex();
-	  auto position = vertex.GetRelativePosition().GetValue();
-	  if ( vertex.GetDetector() == B2Detector::kProtonModule ) {
-	    if ( std::fabs(position.X()) < 500. &&
-		 std::fabs(position.Y()) < 500. &&
-		 std::fabs(position.Z()) < 300. ) {
-	      ntbm_summary->SetNinjaTrackType(itrack, 2);
-	    }
-	    else {
-	      ntbm_summary->SetNinjaTrackType(itrack, 1);
-	    }
-	  }
-	  else if ( vertex.GetDetector() == B2Detector::kWagasciUpstream ) {
-	    if ( std::fabs(position.X()) < 425. &&
-		 std::fabs(position.Y()) < 425. &&
-		 -155. < position.Z() && position.Z() < 60. ) {
-	      ntbm_summary->SetNinjaTrackType(itrack, 2);
-	    }
-	    else {
-	      ntbm_summary->SetNinjaTrackType(itrack, 1);
-	    }
-	  }
-	  else {
-	    ntbm_summary->SetNinjaTrackType(itrack, 0);
-	  }
+  for ( auto *track : tracks ) {
+
+    if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) {
+      ntbm_summary->SetNinjaTrackType(itrack, 0); // ECC interaction candidate (or sand muon)
+    }
+    else if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kMatchingTrack ) {
+      auto vertex = track->GetParentVertex();
+      if ( vertex.GetDetector() == B2Detector::kProtonModule ) {
+	auto position = vertex.GetRelativePosition().GetValue();
+	if ( std::fabs(position.X()) < 500. &&
+	     std::fabs(position.Y()) < 500. &&
+	     std::fabs(position.Z()) < 300. ) {
+	  ntbm_summary->SetNinjaTrackType(itrack, 2); // upstream module interaction
 	}
-	else continue;
-      } else { // not primary track
-	continue;
+	else {
+	  ntbm_summary->SetNinjaTrackType(itrack, 1); // sand muon from wall
+	}
       }
-      
-      ntbm_summary->SetBabyMindMaximumPlane(itrack, track->GetDownstreamHit().GetPlane());
-      ntbm_summary->SetTrackLengthTotal(itrack, track->GetTrackLengthTotal());
-      double nll_plus = track->GetNegativeLogLikelihoodPlus();
-      double nll_minus = track->GetNegativeLogLikelihoodMinus();
-      if ( nll_minus - nll_plus >= 4 )
-	ntbm_summary->SetCharge(itrack, 1);
-      else 
-	ntbm_summary->SetCharge(itrack, -1);
-      ntbm_summary->SetBunch(itrack, track->GetBunch());
-      
-      TVector3 final_position = track->GetFinalPosition().GetValue();
-      if ( std::fabs(final_position.X()) < 1100. &&
-	   std::fabs(final_position.Y()) < 900. &&
-	   final_position.Z() < 1500. ) {
-	//      if ( track->GetIsStopping() ) 
-	ntbm_summary->SetMomentumType(itrack, 0); // Baby MIND range method
+      else if ( vertex.GetDetector() == B2Detector::kWagasciUpstream ) {
+	auto position = vertex.GetRelativePosition().GetValue();
+	if ( std::fabs(position.X()) < 425. &&
+	     std::fabs(position.Y()) < 425. &&
+	     -155. < position.Z() && position.Z() < 60. ) {
+	  ntbm_summary->SetNinjaTrackType(itrack, 2);
+	}
+	else {
+	  ntbm_summary->SetNinjaTrackType(itrack, 1);
+	}
       }
       else {
-	ntbm_summary->SetMomentumType(itrack, 1); // should be curvature type but not yet implemented
+	ntbm_summary->SetNinjaTrackType(itrack, 0); // downstream is not reliable
       }
-      ntbm_summary->SetMomentum(itrack, track->GetReconMomByRange());
-      ntbm_summary->SetMomentumError(itrack, track->GetReconMomByCurve());
-      std::vector<Double_t> direction_and_position = GetBabyMindInitialDirectionAndPosition(track, datatype);
-      for (int view = 0; view < 2; view++) {
-	ntbm_summary->SetBabyMindPosition(itrack, view, direction_and_position.at(view+2));
-	ntbm_summary->SetBabyMindTangent(itrack, view, direction_and_position.at(view));
-      }
+    }
 
-      double track_length = MyFuncCalculateTrackLength(track,
+    ntbm_summary->SetBabyMindMaximumPlane(itrack, track->GetDownstreamHit().GetPlane());
+    ntbm_summary->SetTrackLengthTotal(itrack, track->GetTrackLengthTotal());
+    double nll_plus  = track->GetNegativeLogLikelihoodPlus();
+    double nll_minus = track->GetNegativeLogLikelihoodMinus();
+    if ( nll_minus - nll_plus >= 4 ) 
+      ntbm_summary->SetCharge(itrack, 1);
+    else
+      ntbm_summary->SetCharge(itrack, -1);
+    ntbm_summary->SetBunch(itrack, track->GetBunch());
+
+    TVector3 final_position = track->GetFinalPosition().GetValue();
+    if ( std::fabs(final_position.X()) < 1100. &&
+	 std::fabs(final_position.Y()) < 900. &&
+	 final_position.Z() < 1500. ) {
+      ntbm_summary->SetMomentumType(itrack, 0); // range method
+    }
+    else {
+      ntbm_summary->SetMomentumType(itrack, 1); // curvature or MCS
+    }
+    ntbm_summary->SetMomentum(itrack, track->GetReconMomByRange());
+    ntbm_summary->SetMomentumError(itrack, track->GetReconMomByCurve());
+    std::vector<double > direction_and_position = GetBabyMindInitialDirectionAndPosition(track, B2DataType::kRealData);
+    for ( int view = 0; view < 2; view++ ) {
+      ntbm_summary->SetBabyMindPosition(itrack, view, direction_and_position.at(view+2));
+      ntbm_summary->SetBabyMindTangent(itrack, view, direction_and_position.at(view));
+    }
+
+    double track_length = MyFuncCalculateTrackLength(track,
 						     direction_and_position.at(1),
 						     direction_and_position.at(0),
 						     dimension);
 
-      //std::cout << track->GetTrackLengthTotal() << ", " << track_length << std::endl;
-      
-      ntbm_summary->SetTrackLengthTotal(itrack, track_length);
+    // std::cout << track->GetTrackLengthTotal() << ", " << track_length << std::endl;
 
+    ntbm_summary->SetTrackLengthTotal(itrack, track_length);
 
-      itrack++;
-      
-    } // while track
-  } // while vertex
+    itrack++;
+
+  }
 
 }
 
-void TransferMCInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_summary) {
-  auto it_event = spill_summary.BeginTrueEvent();
-  const auto *event = it_event.Next();
-  ntbm_summary->SetNormalization(event->GetNormalization());
-  ntbm_summary->SetTotalCrossSection(event->GetTotalCrossSection());
-}
-
-void SetHitSummaryInfo(B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary, std::map<int, B2TrackSummary*> map) {
-  
-  int bunch_difference = -1;
-  std::vector<UInt_t > assigned_hit_id;
-  // set bunch for matched hits
-  for ( int icluster = 0; icluster < ntbm_summary->GetNumberOfNinjaClusters(); icluster++ ) {
-    if ( ntbm_summary->GetBabyMindTrackId(icluster) == -1 ) continue;
-    auto track = map.at(ntbm_summary->GetBabyMindTrackId(icluster));
-    for ( int iview = 0; iview < 2; iview++ ) {
-      for ( int ihit = 0; ihit < ntbm_summary->GetNumberOfHits(icluster, iview); ihit++ ) {
-	auto it_hit = spill_summary.BeginHit();
-	while ( auto *hit = it_hit.Next() ) {
-	  if ( hit->GetDetectorId() == B2Detector::kNinja &&
-	       hit->GetView() == iview &&
-	       hit->GetPlane() == ntbm_summary->GetPlane(icluster, iview, ihit) &&
-	       hit->GetSlot().GetValue(hit->GetReadout1()) == ntbm_summary->GetSlot(icluster, iview, ihit) &&
-	       std::find(assigned_hit_id.begin(), assigned_hit_id.end(), hit->GetHitId()) == assigned_hit_id.end() ) {
-	    track->AddHit(hit);
-	    bunch_difference = ntbm_summary->GetBunch(ntbm_summary->GetBabyMindTrackId(icluster)) - hit->GetBunch();
-	    hit->SetBunch(ntbm_summary->GetBunch(ntbm_summary->GetBabyMindTrackId(icluster)));
-	    assigned_hit_id.push_back(hit->GetHitId());
-	    break;
-	  } // fi
-	} // while
-      } // hit loop
-    } // view loop
-  } // cluster loop
-
-  for ( int icluster = 0; icluster < ntbm_summary->GetNumberOfNinjaClusters(); icluster++ ) {
-    if ( ntbm_summary->GetBabyMindTrackId(icluster) >= 0 ) continue;
-    for ( int iview = 0; iview < 2; iview++ ) {
-      for ( int ihit = 0; ihit < ntbm_summary->GetNumberOfHits(icluster, iview); ihit++ ) {
-	auto it_hit = spill_summary.BeginHit();
-	while ( auto *hit = it_hit.Next() ) {
-	  if ( hit->GetDetectorId() != B2Detector::kNinja ) continue;
-	  if ( std::find(assigned_hit_id.begin(), assigned_hit_id.end(), hit->GetHitId()) == assigned_hit_id.end() ) {
-	    if ( hit->GetBunch() + bunch_difference <= 8 )
-	      hit->SetBunch(hit->GetBunch() + bunch_difference);
-	    else 
-	      hit->SetBunch(B2_NON_INITIALIZED_VALUE);
-	    assigned_hit_id.push_back(hit->GetHitId());
-	  } // fi
-	} // while
-      } // hit loop
-    } // view loop
-  } // cluster loop
-
-}
 
 // main
 
 int main(int argc, char *argv[]) {
-
+  
   gErrorIgnoreLevel = kError;
 
   B2Dimension dimension_((std::string)"/home/t2k/odagawa/Programs/WagasciMC/etc/wagasci/b2/geometry");
@@ -1170,162 +1054,148 @@ int main(int argc, char *argv[]) {
   logging::core::get()->set_filter
     (
      logging::trivial::severity >= logging::trivial::info
-     //logging::trivial::severity >= logging::trivial::debug
      //logging::trivial::severity >= logging::trivial::trace
+     //logging::trivial::severity >= logging::trivial::debug
      );
 
-  BOOST_LOG_TRIVIAL(info) << "==========NINJA Track Matching Start==========";
+  BOOST_LOG_TRIVIAL(info) << "===========NINJA Track Matching Start==========";
 
-  if ( argc != 6 ) {
+  if ( argc != 4 ) {
     BOOST_LOG_TRIVIAL(error) << "Usage : " << argv[0]
-			     << " <input B2 file path> <output NTBM file path> <output B2 file path> <z shift> <MC(0)/data(1)>";
+			     << " <input B2 file path> <input B2 file path only track4> <output NTBM file path>";
     std::exit(1);
   }
 
-  try {
-    B2Reader reader(argv[1]);
+  B2Reader reader(argv[1]);
+  B2Reader reader4(argv[2]);
 
-    TFile *ntbm_file = new TFile(argv[2], "recreate");
-    TTree *ntbm_tree = new TTree("tree", "NINJA BabyMIND Original Summary");
-    NTBMSummary* my_ntbm = nullptr;
-    ntbm_tree->Branch("NTBMSummary", &my_ntbm);
+  TFile *ntbm_file = new TFile(argv[3], "recreate");
+  TTree *ntbm_tree = new TTree("tree", "NINJA BabyMIND Original Summary");
+  NTBMSummary* my_ntbm = nullptr;
+  ntbm_tree->Branch("NTBMSummary", &my_ntbm);
 
-    B2Writer writer(argv[3], reader);
+  while ( reader.ReadNextSpill() > 0 ) {
+    // std::cout << reader.GetEntryNumber() << std::endl;
+    // if ( reader.GetEntryNumber() > 500) break;
+    reader4.ReadSpill(reader.GetEntryNumber());
 
-    double z_shift = std::stof(argv[4]);
-    int datatype = std::stoi(argv[5]);
+    my_ntbm->SetEntryInDailyFile(reader.GetEntryNumber());
 
-    int nspill = 0;
+    auto &input_spill_summary = reader.GetSpillSummary();
+    auto &input_spill_summary4 = reader4.GetSpillSummary();
+    int timestamp = input_spill_summary.GetBeamSummary().GetTimestamp();
+    int timestamp4 = input_spill_summary4.GetBeamSummary().GetTimestamp();
+    BOOST_LOG_TRIVIAL(debug) << "entry : " << reader.GetEntryNumber() << ", "
+			     << reader4.GetEntryNumber();
+    BOOST_LOG_TRIVIAL(debug) << "timestamp : " << timestamp << ", " << timestamp4;
 
-    while ( reader.ReadNextSpill() > 0 ) {
+    TransferBeamInfo(input_spill_summary, my_ntbm);
 
-      my_ntbm->SetEntryInDailyFile(reader.GetEntryNumber());
-
-      auto &input_spill_summary = writer.GetSpillSummary();
-      int timestamp = input_spill_summary.GetBeamSummary().GetTimestamp();
-      BOOST_LOG_TRIVIAL(debug) << "entry : " << reader.GetEntryNumber();
-      BOOST_LOG_TRIVIAL(debug) << "timestamp : " << timestamp;
- 
-      TransferBeamInfo(input_spill_summary, my_ntbm);
-      if ( datatype == B2DataType::kMonteCarlo)
-	TransferMCInfo(input_spill_summary, my_ntbm);
-
-      // Collect all NINJA hits
-      auto it_hit = input_spill_summary.BeginHit();
-      std::vector<const B2HitSummary* > ninja_hits;
-      while ( const auto *ninja_hit = it_hit.Next() ) {
-	if ( ninja_hit->GetDetectorId() == B2Detector::kNinja ) {
-	  if ( B2Dimension::CheckDeadChannel(B2Detector::kNinja, ninja_hit->GetView(),
-					     ninja_hit->GetReadout1(), ninja_hit->GetPlane(),
-					     ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1())) )
-	    continue;
-
-	  if ( ninja_hit->GetView() == B2View::kTopView &&
-	       ninja_hit->GetPlane() == 0 &&
-	       ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1()) == 25 &&
-	       ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 )
-	    continue; // noisy channel
-	  // if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 )
-	  if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 2.5 )
-	    continue;
-
-	  ninja_hits.push_back(ninja_hit);
+    // Collect all NINJA hits
+    auto it_hit = input_spill_summary.BeginHit();
+    std::vector<const B2HitSummary* > ninja_hits;
+    while ( const auto *ninja_hit = it_hit.Next() ) {
+      if ( ninja_hit->GetDetectorId() == B2Detector::kNinja ) {
+	if ( B2Dimension::CheckDeadChannel(B2Detector::kNinja, ninja_hit->GetView(),
+					   ninja_hit->GetReadout1(), ninja_hit->GetPlane(),
+					   ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1())) ) { // dead channel
+	  continue;
 	}
+
+	if ( ninja_hit->GetView() == B2View::kTopView &&
+	     ninja_hit->GetPlane() == 0 &&
+	     ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1()) == 25 &&
+	     ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 ) { // top noisy channel
+	  continue;
+	}
+
+	if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 2.5 ) { // normal threshold
+	  continue;
+	}
+
+	ninja_hits.push_back(ninja_hit);
+
       }
-
-      // Create X/Y NINJA clusters
-      if ( ninja_hits.size() > 0 ) {
-	CreateNinjaCluster(ninja_hits, my_ntbm);
-	// Position reconstruction w/o angle info
-	ReconstructNinjaPosition(my_ntbm);
-      }
-
-      // Collect all BM 3d tracks
-      int number_of_tracks = 0;
-      std::map<int, B2TrackSummary* > track_id_map;
-      
-      auto it_recon_vertex = input_spill_summary.BeginReconVertex();
-      while ( auto *vertex = it_recon_vertex.Next() ) {
-	auto it_outgoing_track = vertex->BeginTrack();
-	while ( auto *track = it_outgoing_track.Next() ) {
-	  if ( track->GetTrackType() == B2TrackType::kPrimaryTrack ) {
-	    // not start from the other WAGASCI modules
-	    if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) {
-	      number_of_tracks++;
-	    // start from the other modules and have hits in Baby MIND
-	    } else if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kMatchingTrack && 
-			track->HasDetector(B2Detector::kBabyMind) ) {
-	      if ( track->HasDetector(B2Detector::kProtonModule) ||
-		   track->HasDetector(B2Detector::kWagasciUpstream) ||
-		   track->HasDetector(B2Detector::kWagasciDownstream) ) {
-		number_of_tracks++;
-	      }
-	    }
-	  }
-	  track_id_map.insert(std::make_pair(number_of_tracks-1, track));
-	} // track
-      } // vertex
-            
-      my_ntbm->SetNumberOfTracks(number_of_tracks);
-
-      // Extrapolate BabyMIND tracks to the NINJA position
-      // and get the best cluster to match each BabyMIND track
-      if ( number_of_tracks > 0 ) {
-
-	TransferBabyMindTrackInfo(input_spill_summary, my_ntbm, datatype, dimension_);
-
-	int start_bunch = 0; // bunch id (1-8) corresponds to NINJA tracker ADC triggered timing
-	int bunch_difference = -1; // difference between the bunch in interest and the start_bunch
-	
-	for ( int ibmtrack = 0; ibmtrack < my_ntbm->GetNumberOfTracks(); ibmtrack++ ) {
-	  if ( start_bunch > 0 ) // when the start bunch is already determined
-	    bunch_difference = my_ntbm->GetBunch(ibmtrack) - start_bunch;
-	  if ( NinjaHitExpected(my_ntbm, ibmtrack, z_shift) && // Extrapolated position w/i tracker area
-	       bunch_difference < 7 ) { // Multi hit TDC range
-	    if ( MatchBabyMindTrack(my_ntbm, ibmtrack, bunch_difference, z_shift) ) {
-	      // If this is the first matching, set start_bunch
-	      if ( start_bunch == 0 ) {
-		start_bunch = my_ntbm->GetBunch(ibmtrack) - bunch_difference;
-		BOOST_LOG_TRIVIAL(debug) << "This is the first matching: "
-					 << "start bunch = " << start_bunch;
-	      }
-	    }
-	  }
-	} // ibmtrack
-	
-	// Update NINJA hit summary information
-	ReconstructNinjaTangent(my_ntbm); // reconstruct tangent
-	ReconstructNinjaPosition(my_ntbm); // use reconstructed tangent info
-	if ( datatype == B2DataType::kMonteCarlo &&
-	     my_ntbm->GetNumberOfNinjaClusters() > 0 )
-	  SetTruePositionAngle(input_spill_summary, my_ntbm);
-      }
-      
-      SetHitSummaryInfo(input_spill_summary, my_ntbm, track_id_map);
-
-      // Create output tree
-      BOOST_LOG_TRIVIAL(debug) << *my_ntbm;
-      ntbm_tree->Fill();
-      my_ntbm->Clear("C");
-      writer.Fill();
     }
 
-    ntbm_file->cd();
-    ntbm_tree->Write();
-    ntbm_file->Close();
+    // Create X/Y NINJA clusters
+    if ( ninja_hits.size() > 0 ) {
+      CreateNinjaCluster(ninja_hits, my_ntbm);
+      // Position recosntruction w/o angle info
+      ReconstructNinjaPosition(my_ntbm);
+    }
+
+    // Collect all BM 3d tracks
+    std::vector<const B2TrackSummary* > bm_recon_tracks;
     
-  } catch (const std::runtime_error &error) {
-    BOOST_LOG_TRIVIAL(fatal) << "Runtime error : " << error.what();
-    std::exit(1);
-  } catch (const std::invalid_argument &error) {
-    BOOST_LOG_TRIVIAL(fatal) << "Invalid argument error : " << error.what();
-    std::exit(1);
-  } catch (const std::out_of_range &error) {
-    BOOST_LOG_TRIVIAL(fatal) << "Out of range error : " << error.what();
-    std::exit(1);
+    // track type != 4    
+    auto it_recon_track = input_spill_summary.BeginReconTrack();
+    while ( const auto *track = it_recon_track.Next() ) {
+      if ( track->GetTrackType() != B2TrackType::kPrimaryTrack ) continue;
+      if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) continue;
+      if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kMatchingTrack &&
+	   track->HasDetector(B2Detector::kBabyMind) ) {
+	if ( track->HasDetector(B2Detector::kProtonModule) ||
+	     track->HasDetector(B2Detector::kWagasciUpstream) ||
+	     track->HasDetector(B2Detector::kWagasciDownstream) ) {
+	  bm_recon_tracks.push_back(track);
+	}
+      }      
+    }
+
+    // track type == 4
+    auto it_recon_track4 = input_spill_summary4.BeginReconTrack();
+    while ( const auto *track = it_recon_track4.Next() ) {
+      if ( track->GetTrackType() != B2TrackType::kPrimaryTrack ) continue;
+      if ( track->GetPrimaryTrackType() == B2PrimaryTrackType::kBabyMind3DTrack ) {
+	BOOST_LOG_TRIVIAL(trace) << "Non-matching track : " << *track;
+	bm_recon_tracks.push_back(track);
+      }
+      else continue;
+    }
+
+    my_ntbm->SetNumberOfTracks(bm_recon_tracks.size());
+    std::sort(bm_recon_tracks.begin(), bm_recon_tracks.end(), CompareBMReconTracksToMatch);
+
+    // Extrapolate BabyMIND tracks to the NINJA position
+    // and get the best cluster to match each BabyMIND track
+    if ( !bm_recon_tracks.empty() ) {
+      TransferBabyMindTrackInfo(bm_recon_tracks, my_ntbm, dimension_);
+
+      int start_bunch = 0; // bunch id (1-8) corresponds to NINJA tracker ADC triggered timing
+      int bunch_difference = -1; // difference between the bunch in interest and the start bunch
+
+      for ( int ibmtrack = 0; ibmtrack < my_ntbm->GetNumberOfTracks();ibmtrack++ ) {
+	if ( start_bunch > 0 ) // when the start bunch is already determined
+	  bunch_difference = my_ntbm->GetBunch(ibmtrack) - start_bunch;
+	if ( NinjaHitExpected(my_ntbm, ibmtrack, 0.) && // Extrapolated position within the tracker area
+	     bunch_difference < 7 ) { // Multi hit TDC range
+	  if ( MatchBabyMindTrack(my_ntbm, ibmtrack, bunch_difference, 0.) ) {
+	    if ( start_bunch == 0 ) {
+	      start_bunch = my_ntbm->GetBunch(ibmtrack) - bunch_difference;
+	      BOOST_LOG_TRIVIAL(debug) << "This is the first matching : "
+				       << "start bunch = " << start_bunch;
+	    }
+	  }
+	}
+      } // ibmtrack
+
+      // Update NINJA hit summary information
+      ReconstructNinjaTangent(my_ntbm); // reconstruct tangent
+      ReconstructNinjaPosition(my_ntbm); // use reconstructed tangent info      
+    }
+
+    // Create output tree
+    BOOST_LOG_TRIVIAL(trace) << *my_ntbm;
+    ntbm_tree->Fill();
+    my_ntbm->Clear("C");
   }
-  
-  BOOST_LOG_TRIVIAL(info) << "==========NINJA Track Matching Finish==========";
+
+  ntbm_file->cd();
+  ntbm_tree->Write();
+  ntbm_file->Close();
+
+  BOOST_LOG_TRIVIAL(info) << "==========NINJA Track Matching Merge Finish==========";
   std::exit(0);
 
 }

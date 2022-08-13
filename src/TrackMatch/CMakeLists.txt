@@ -14,3 +14,18 @@ target_link_libraries(TrackMatch
 
 # install the execute in the bin folder
 install(TARGETS TrackMatch DESTINATION "${CMAKE_INSTALL_BINDIR}/TrackMatch")
+
+add_executable(TrackMatchMerge
+	TrackMatchMerge.cpp
+	TrackMatchMerge.hpp)
+
+target_link_libraries(TrackMatchMerge
+	${ROOT_LIBRARIES}
+	${Geant4_LIBRARIES}
+	${Boost_LIBRARIES}
+	${B2MC_LIBRARY}
+	libNTBM
+)
+
+# install the execute in the bin folder
+install(TARGETS TrackMatchMerge DESTINATION "${CMAKE_INSTALL_BINDIR}/TrackMatch")

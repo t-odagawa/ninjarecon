@@ -29,6 +29,14 @@ bool CompareNinjaHits(const B2HitSummary* lhs, const B2HitSummary* rhs);
 bool CompareBabyMindHitInOneTrack(const B2HitSummary* lhs, const B2HitSummary *rhs);
 
 /**
+ * Comparator for B2TrackSummary vector sort
+ * @param lhs left hand side object
+ * @param rhs right hand side object
+ * @return true if the objects should not be swapped
+ */
+bool CompareBMReconTracksToMatch(const B2TrackSummary* lhs, const B2TrackSummary* rhs);
+
+/**
  * Create NINJA tracker clusters
  * @param ninja_hits NINJA Hit summary vector
  * @param ninja_clusters NTBMSummary for the spill (x/y separated and only NINJA tracker data)
@@ -140,7 +148,7 @@ double GetTrackAreaMin(double pos, double tangent, int iplane, int jplane, int v
  * @param jplane plane id of the intercept evaluated scintillator bar
  * @param vertex vertex position of the track starting point
  */
-double GetTrackAreMax(double pos, double tangent, int iplane, int jplane, int vertex);
+double GetTrackAreaMax(double pos, double tangent, int iplane, int jplane, int vertex);
 
 /**
  * Get boolean if the normal track analysis is possible
@@ -171,38 +179,19 @@ void ReconstructNinjaTangent(NTBMSummary* ntbm);
 void ReconstructNinjaPosition(NTBMSummary* ntbm);
 
 /**
- * Set TSS info as true position/angle information to evaluate
- * tracker performance with MC
- * @param spill_summary B2SpillSummary object
- * @param ntbm_summary NTBMSummary object
- */
-void SetTruePositionAngle(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary);
-
-/**
  * Transfer Beam information from B2BeamSummary to NTBMSummary
  * @param spill_summary B2SpillSummary object
  * @param ntbm_summary NTBMSummary object
  * @param datatype MC or real data
  */
-void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary, int datatype);
+void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary, int datatype, B2Dimension &dimension);
 
 /**
  * Transfer Baby MIND track info from B2TrackSummary to NTBMSummary
- * @param spill_summary B2SpillSummary object
+ * @param tracks vector of B2TrackSummary
  * @param ntbm_summary NTBMSummary object
  */
-void TransferBabyMindTrackInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary, B2Dimension &dimension);
-
-/**
- * Transfer MC normalization info from B2EventSummary to NTBMSummary
- * @param spill_summary B2SpillSummary object
- * @param ntbmsummary NTBMSummary object
- */
-void TransferMCInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary);
-
-void SetHitSummaryInfo(B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary,
-		       std::map<int, B2TrackSummary* > map);
-
+void TransferBabyMindTrackInfo(std::vector<const B2TrackSummary* > tracks, NTBMSummary ntbm_summary);
 
 double MyFuncCalculateTrackLength(const B2TrackSummary *track, double ax, double ay);
 #endif
