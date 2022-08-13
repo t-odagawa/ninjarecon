@@ -32,7 +32,7 @@
 #include <B2Pdg.hh>
 #include "NTBMSummary.hh"
 
-#include "TrackMatch.hpp"
+#include "TrackMatchMerge.hpp"
 
 namespace logging = boost::log;
 
@@ -838,8 +838,131 @@ void TransferBeamInfo(const B2SpillSummary &spill_summary, NTBMSummary *ntbm_sum
   }
 }
 
+double MyFuncCalculateTrackLength(const B2TrackSummary* track, double ax, double ay,
+				  B2Dimension &dimension) {
+
+  double track_length_ = 0;
+
+  double lastplane = track->GetDownstreamHit().GetPlane();
+
+  const double num_magnet[19] = {0,3,0,1,1,1,2,2,2,2,4,0,3,0,4,4,4,0,0};
+
+  double posx[18] = {};
+  double posy[18] = {};
+  double posz[18] = {};
+  int sizex[18] = {};
+  int sizey[18] = {};
+
+  std::vector<UInt_t > used_hit;
+
+  auto it_cluster = track->BeginCluster();
+  while ( auto *cluster = it_cluster.Next() ) {
+    auto it_hit = cluster->BeginHit();
+    while ( auto *hit = it_hit.Next() ) {
+      if ( hit->GetDetectorId() != B2Detector::kBabyMind ) continue;
+      if ( std::find(used_hit.begin(), used_hit.end(), hit->GetHitId())
+	   != used_hit.end() ) continue;
+      used_hit.push_back(hit->GetHitId());
+
+      int plane = hit->GetPlane();
+      
+      TVector3 position;
+
+      dimension.GetPosBm(hit->GetView(),
+			  hit->GetPlane(),
+			  hit->GetSlot().GetValue(hit->GetReadout1()),
+			  position);
+      if ( hit->GetView() == B2View::kSideView ) {
+	posy[plane] += position.Y();
+	posz[plane] += position.Z();
+	sizey[plane]++;
+      }
+      else if ( hit->GetView() == B2View::kTopView ) {
+	posx[plane] += position.X();
+	posz[plane] += position.Z();
+	sizex[plane]++;
+      }
+    }
+  }
+
+  std::vector<double > posx_mod;
+  std::vector<double > posy_mod;
+  std::vector<double > posz_mod;
+  std::vector<int > plane_vec;
+
+  for ( int iplane = 0; iplane < 18; iplane++ ) {
+    if ( sizex[iplane] < 1 ||
+	 sizey[iplane] < 1 ) continue;
+    posx[iplane] /= sizex[iplane];
+    posy[iplane] /= sizey[iplane];
+    posz[iplane] /= (sizex[iplane] + sizey[iplane]);
+
+    posx_mod.push_back(posx[iplane]);
+    posy_mod.push_back(posy[iplane]);
+    posz_mod.push_back(posz[iplane]);
+    plane_vec.push_back(iplane);
+  }
+
+  for ( int i = 0; i < plane_vec.size(); i++ ) {
+   
+    auto plane = plane_vec.at(i);
+
+    double ax_ = ax;
+    double ay_;
+
+    int num_iron = 0;
+
+    if ( plane == plane_vec.front() ) {
+
+      ay_ = ay;
+
+      for ( int iplane = 0; iplane <= plane; iplane++ ) {
+	num_iron += num_magnet[iplane];
+      }
+      
+      track_length_ += num_iron * 3. * 7.86 * std::sqrt(ax_ * ax_ + ay_ * ay_ + 1);
+      track_length_ += (sizex[plane] + sizey[plane]) * 0.75 * 1. * std::sqrt(ax_ * ax_ + ay_ * ay_ + 1.) * 1.289;
+
+    }
+    else if ( plane != plane_vec.back() ) {
+
+      ay_ = (posy_mod.at(i) - posy_mod.at(i-1)) / (posz_mod.at(i) - posz_mod.at(i-1));
+
+      int startplane = plane_vec.at(i-1);
+      for ( int iplane = startplane+1; iplane <= plane; iplane++ ) {
+	num_iron += num_magnet[iplane];
+      }
+
+      track_length_ += num_iron * 3. * 7.86 * std::sqrt(ax_ * ax_ + ay_ * ay_ + 1);
+      track_length_ += (sizex[plane] + sizey[plane]) * 0.75 * 1. * std::sqrt(ax_ * ax_ + ay_ * ay_ + 1.) * 1.289;
+
+    }
+    else {
+
+      ay_ = (posy_mod.at(i) - posy_mod.at(i-1)) / (posz_mod.at(i) - posz_mod.at(i-1));
+
+      int startplane = plane_vec.at(i-1);
+      for ( int iplane = startplane+1; iplane <= plane; iplane++ ) {
+	num_iron += num_magnet[iplane];
+      }
+      //std::cout << "Num iron at the last plane : " << num_iron + num_magnet[plane+1] * 0.5 << std::endl;
+      track_length_ += (num_iron + num_magnet[plane+1] * 0.5) * 3. * 7.86 * std::sqrt(ax_ * ax_ + ay_ * ay_ + 1.);
+      track_length_ += (sizex[plane] + sizey[plane]) * 0.75 * 1. * std::sqrt(ax_ * ax_ + ay_ * ay_ + 1) * 1.289;
+
+    }
+
+    //std::cout << "Plane : " << plane << ", # of iron" << num_iron << std::endl;
+    //std::cout << "Direction : " << "(" << ax_ << ", " << ay_ << ")" << std::endl;
+    //std::cout << "track length : " << track_length_ << std::endl;
+  }
+
+  return track_length_;
+
+}
+
 void TransferBabyMindTrackInfo(std::vector<const B2TrackSummary* > tracks,
-			       NTBMSummary *ntbm_summary) {
+			       NTBMSummary *ntbm_summary,
+			       B2Dimension &dimension) {
 
   int itrack = 0;
 
@@ -888,9 +1011,9 @@ void TransferBabyMindTrackInfo(std::vector<const B2TrackSummary* > tracks,
     ntbm_summary->SetBunch(itrack, track->GetBunch());
 
     TVector3 final_position = track->GetFinalPosition().GetValue();
-    if ( std::fabs(final_position.X()) < 1300. &&
-	 std::fabs(final_position.Y()) < 950. &&
-	 final_position.Z() < 1800. ) {
+    if ( std::fabs(final_position.X()) < 1100. &&
+	 std::fabs(final_position.Y()) < 900. &&
+	 final_position.Z() < 1500. ) {
       ntbm_summary->SetMomentumType(itrack, 0); // range method
     }
     else {
@@ -904,17 +1027,29 @@ void TransferBabyMindTrackInfo(std::vector<const B2TrackSummary* > tracks,
       ntbm_summary->SetBabyMindTangent(itrack, view, direction_and_position.at(view));
     }
 
+    double track_length = MyFuncCalculateTrackLength(track,
+						     direction_and_position.at(1),
+						     direction_and_position.at(0),
+						     dimension);
+
+    // std::cout << track->GetTrackLengthTotal() << ", " << track_length << std::endl;
+
+    ntbm_summary->SetTrackLengthTotal(itrack, track_length);
+
     itrack++;
 
   }
 
 }
 
+
 // main
 
 int main(int argc, char *argv[]) {
   
   gErrorIgnoreLevel = kError;
+
+  B2Dimension dimension_((std::string)"/home/t2k/odagawa/Programs/WagasciMC/etc/wagasci/b2/geometry");
 
   logging::core::get()->set_filter
     (
@@ -940,7 +1075,8 @@ int main(int argc, char *argv[]) {
   ntbm_tree->Branch("NTBMSummary", &my_ntbm);
 
   while ( reader.ReadNextSpill() > 0 ) {
-    
+    // std::cout << reader.GetEntryNumber() << std::endl;
+    // if ( reader.GetEntryNumber() > 500) break;
     reader4.ReadSpill(reader.GetEntryNumber());
 
     my_ntbm->SetEntryInDailyFile(reader.GetEntryNumber());
@@ -1002,8 +1138,6 @@ int main(int argc, char *argv[]) {
 	if ( track->HasDetector(B2Detector::kProtonModule) ||
 	     track->HasDetector(B2Detector::kWagasciUpstream) ||
 	     track->HasDetector(B2Detector::kWagasciDownstream) ) {
-	  BOOST_LOG_TRIVIAL(trace) << "Matching track : " << *track;
-	  std::cout << track->GetTrackLengthTotal() << std::endl;
 	  bm_recon_tracks.push_back(track);
 	}
       }      
@@ -1026,7 +1160,7 @@ int main(int argc, char *argv[]) {
     // Extrapolate BabyMIND tracks to the NINJA position
     // and get the best cluster to match each BabyMIND track
     if ( !bm_recon_tracks.empty() ) {
-      TransferBabyMindTrackInfo(bm_recon_tracks, my_ntbm);
+      TransferBabyMindTrackInfo(bm_recon_tracks, my_ntbm, dimension_);
 
       int start_bunch = 0; // bunch id (1-8) corresponds to NINJA tracker ADC triggered timing
       int bunch_difference = -1; // difference between the bunch in interest and the start bunch

@@ -28,4 +28,4 @@ target_link_libraries(TrackMatchMerge
 )
 
 # install the execute in the bin folder
-install(TARGETS TrackMatchMerge DESTINATION "${CMAKE_INSTALL_BINDIR}/TrackMatchMerge")
+install(TARGETS TrackMatchMerge DESTINATION "${CMAKE_INSTALL_BINDIR}/TrackMatch")

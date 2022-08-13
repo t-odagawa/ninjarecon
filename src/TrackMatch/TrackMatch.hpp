@@ -9,6 +9,7 @@
 #include "B2HitSummary.hh"
 #include "B2BeamSummary.hh"
 #include "B2TrackSummary.hh"
+#include "B2Dimension.hh"
 #include "NTBMSummary.hh"
 
 /**
@@ -190,7 +191,7 @@ void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_sum
  * @param spill_summary B2SpillSummary object
  * @param ntbm_summary NTBMSummary object
  */
-void TransferBabyMindTrackInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary);
+void TransferBabyMindTrackInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summary, B2Dimension &dimension);
 
 /**
  * Transfer MC normalization info from B2EventSummary to NTBMSummary
@@ -202,4 +203,6 @@ void TransferMCInfo(const B2SpillSummary& spill_summary, NTBMSummary ntbm_summar
 void SetHitSummaryInfo(B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary,
 		       std::map<int, B2TrackSummary* > map);
 
+
+double MyFuncCalculateTrackLength(const B2TrackSummary *track, double ax, double ay);
 #endif

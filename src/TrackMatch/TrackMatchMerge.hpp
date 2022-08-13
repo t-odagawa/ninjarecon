@@ -9,6 +9,7 @@
 #include "B2HitSummary.hh"
 #include "B2BeamSummary.hh"
 #include "B2TrackSummary.hh"
+#include "B2Dimension.hh"
 #include "NTBMSummary.hh"
 
 /**
@@ -183,7 +184,7 @@ void ReconstructNinjaPosition(NTBMSummary* ntbm);
  * @param ntbm_summary NTBMSummary object
  * @param datatype MC or real data
  */
-void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary, int datatype);
+void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary, int datatype, B2Dimension &dimension);
 
 /**
  * Transfer Baby MIND track info from B2TrackSummary to NTBMSummary
@@ -192,4 +193,5 @@ void TransferBeamInfo(const B2SpillSummary& spill_summary, NTBMSummary* ntbm_sum
  */
 void TransferBabyMindTrackInfo(std::vector<const B2TrackSummary* > tracks, NTBMSummary ntbm_summary);
 
+double MyFuncCalculateTrackLength(const B2TrackSummary *track, double ax, double ay);
 #endif
