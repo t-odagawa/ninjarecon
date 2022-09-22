@@ -15,3 +15,18 @@ target_link_libraries(Emergency
 
 # install the execute in the bin folder
 install(TARGETS Emergency DESTINATION "${CMAKE_INSTALL_BINDIR}/Emergency")
+
+add_executable(PositionOnlyMatch
+	PositionOnlyMatch.cpp
+)
+
+target_link_libraries(PositionOnlyMatch
+	${ROOT_LIBRARIES}
+	${Geant4_LIBRARIES}
+	${Boost_LIBRARIES}
+	${B2MC_LIBRARY}
+	libNTBM
+)
+
+# install the execute in the bin folder
+install(TARGETS PositionOnlyMatch DESTINATION "${CMAKE_INSTALL_BINDIR}/PositionOnlyMatch")

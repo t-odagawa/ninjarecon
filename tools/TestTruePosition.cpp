@@ -114,6 +114,10 @@ int main (int argc, char *argv[]) {
 					  100, -25, 25);
     }
 
+    TH2D *hist_pos_y_dy = new TH2D("hist_pos_y_dy", ";Y [mm];#Delta Y [mm]", 500, -500, 500, 100, -30, 30);    
+    TH2D *hist_pos_x_dx = new TH2D("hist_pos_x_dx", ";X [mm];#Delta X [mm]", 500, -500, 500, 100, -30, 30);
+    
+
     for ( int ientry = 0; ientry < tree->GetEntries(); ientry++ ) {
 
       tree->GetEntry(ientry);
@@ -135,6 +139,12 @@ int main (int argc, char *argv[]) {
 	
 	hist_pos_y->Fill(ninja_recon_position.at(B2View::kSideView) - ninja_true_position.at(B2View::kSideView), weight);
 	hist_pos_x->Fill(ninja_recon_position.at(B2View::kTopView) - ninja_true_position.at(B2View::kTopView), weight);
+	hist_pos_y_dy->Fill(ninja_true_position.at(B2View::kSideView),
+			    ninja_recon_position.at(B2View::kSideView) - ninja_true_position.at(B2View::kSideView),
+			    weight);
+	hist_pos_x_dx->Fill(ninja_true_position.at(B2View::kTopView),
+			    ninja_recon_position.at(B2View::kTopView) - ninja_true_position.at(B2View::kTopView),
+			    weight);
 	int side_bin_id = GetBinId(ninja_recon_tangent.at(B2View::kSideView));
 	int top_bin_id = GetBinId(ninja_recon_tangent.at(B2View::kTopView));
 	if (side_bin_id < 10)
@@ -153,6 +163,8 @@ int main (int argc, char *argv[]) {
       hist_pos_y_slice[islice]->Write();
       hist_pos_x_slice[islice]->Write();
     }
+    hist_pos_y_dy->Write();
+    hist_pos_x_dx->Write();
     output->Close();
 
   } catch (const std::runtime_error &error) {
