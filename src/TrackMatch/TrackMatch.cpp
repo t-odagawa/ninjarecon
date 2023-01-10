@@ -15,6 +15,7 @@
 #include <TF1.h>
 #include <TString.h>
 #include <TCanvas.h>
+#include <TRandom.h>
 
 // B2 includes
 #include <B2Reader.hh>
@@ -69,7 +70,40 @@ bool CompareBabyMindHitsInOneTrack(const B2HitSummary* lhs, const B2HitSummary *
       < rhs->GetSlot().GetValue(rhs->GetSingleReadout());
   */ // for old version
 }
+/*
+void AddDarkNoiseHits(std::vector<const B2HitSummary* > &ninja_hits) {
 
+  for ( int iview = 0; iview < NUMBER_OF_VIEWS; iview++ ) {
+    for ( int iplane = 0; iplane < NUMBER_OF_PLANES; iplane++ ) {
+      for ( int islot = 0; islot < NUMBER_OF_SLOTS_IN_PLANE; islot++ ) {
+	if ( gRandom->Uniform(0,1) < 5.5e-3 ) {
+	  B2HitSummary* hit;
+	  hit->SetDetector(B2Detector::kNinja);
+	  TVector3 position;
+	  B2Dimension::GetPosNinjaTracker((B2View)iview, iplane, islot, position);
+	  hit->SetRelativePositionTrue(position);
+	  hit->SetScintillatorPosition(position);
+	  if ( iview == B2View::kSideView ) {
+	    hit->SetScintillatorType(B2ScintillatorType::kHorizontal);
+	    hit->SetView(B2View::kSideView);
+	    hit->SetSlot(detector_to_single_readout(B2Detector::kNinja, B2ScintillatorType::kHorizontal, iplane), islot);
+	  }
+	  else if ( iview == B2View::kTopView ) {
+	    hit->SetScintillatorType(B2ScintillatorType::kVertical);
+	    hit->SetView(B2View::kTopView);
+	    hit->SetSlot(detector_to_single_readout(B2Detector::kNinja, B2ScintillatorType::kVertical, iplane), islot);
+	  }
+	  hit->SetPlaneGrid(B2GridPlane::kPlaneScintillator);
+	  hit->SetHighGainPeu(3.);
+	  hit->SetIsNoiseHitTrue(kTRUE);
+	  ninja_hits.push_back(hit);
+	}	
+      }
+    }
+  }
+
+}
+*/
 // NINJA cluster creation
 
 void CreateNinjaCluster(std::vector<const B2HitSummary* > ninja_hits,
@@ -1164,6 +1198,7 @@ void SetHitSummaryInfo(B2SpillSummary& spill_summary, NTBMSummary* ntbm_summary,
 int main(int argc, char *argv[]) {
 
   gErrorIgnoreLevel = kError;
+  gRandom->SetSeed(1);
 
   B2Dimension dimension_((std::string)"/home/t2k/odagawa/Programs/WagasciMC/etc/wagasci/b2/geometry");
 
@@ -1224,14 +1259,18 @@ int main(int argc, char *argv[]) {
 	       ninja_hit->GetPlane() == 0 &&
 	       ninja_hit->GetSlot().GetValue(ninja_hit->GetReadout1()) == 25 &&
 	       ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 )
-	    continue; // noisy channel
-	  // if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 )
+	    continue; // noisy channe
+	  //if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 1.5 ) // minus
+	  // if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 3.5 ) // plus
 	  if ( ninja_hit->GetHighGainPeu(ninja_hit->GetReadout1()) < 2.5 )
 	    continue;
 
 	  ninja_hits.push_back(ninja_hit);
 	}
       }
+
+      // Add dark noise if necessary
+      // AddDarkNoiseHits(ninja_hits);
 
       // Create X/Y NINJA clusters
       if ( ninja_hits.size() > 0 ) {
